@@ -93,26 +93,44 @@ class GameEngine(private val config: GameConfig) {
     
     fun reveal(tile: Tile, countMove: Boolean = true): GameState {
         if (gameState != GameState.PLAYING || tile.revealed || tile.mark == Mark.FLAG) return gameState
-        
+
         // First click should always be safe
         if (firstClick) {
             firstClick = false
             ensureSafeFirstClick(tile)
         }
-        
-        tile.revealed = true
-        if (countMove) stats.totalMoves++
-        
-        return if (tile.hasMine) {
-            gameState = GameState.LOST
-            stats.endTime = System.currentTimeMillis()
-            gameState
-        } else {
-            if (tile.adjMines == 0) {
-                neighbors(tile).forEach { reveal(it, countMove = false) }
+
+        // Breadth-first flood fill starting from the clicked tile
+        val queue = ArrayDeque<Tile>()
+        queue += tile
+        var counted = false
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (current.revealed || current.mark == Mark.FLAG) continue
+
+            current.revealed = true
+            if (countMove && !counted) {
+                stats.totalMoves++
+                counted = true
             }
-            checkWinCondition()
+
+            if (current.hasMine) {
+                gameState = GameState.LOST
+                stats.endTime = System.currentTimeMillis()
+                return gameState
+            }
+
+            if (current.adjMines == 0) {
+                neighbors(current).forEach { neighbor ->
+                    if (!neighbor.revealed && neighbor.mark != Mark.FLAG) {
+                        queue += neighbor
+                    }
+                }
+            }
         }
+
+        return checkWinCondition()
     }
     
     private fun ensureSafeFirstClick(firstTile: Tile) {
