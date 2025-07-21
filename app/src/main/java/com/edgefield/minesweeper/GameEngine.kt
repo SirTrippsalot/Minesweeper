@@ -13,11 +13,13 @@ class GameEngine(private val config: GameConfig) {
     private val tiling = GridFactory.build(
         kind = when (config.gridType) {
             GridType.SQUARE -> GridKind.SQUARE
-            GridType.TRIANGLE -> GridKind.TRIANGLE  
+            GridType.TRIANGLE -> GridKind.TRIANGLE
             GridType.HEXAGON -> GridKind.HEXAGON
             GridType.OCTASQUARE -> GridKind.OCTASQUARE
             GridType.CAIRO -> GridKind.CAIRO
-            else -> GridKind.SQUARE
+            GridType.RHOMBILLE -> GridKind.RHOMBILLE
+            GridType.SNUB_SQUARE -> GridKind.SNUB_SQUARE
+            GridType.PENROSE -> GridKind.PENROSE
         },
         w = config.cols,
         h = config.rows

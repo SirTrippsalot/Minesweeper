@@ -24,7 +24,10 @@ fun GridTypeSelector(
             GridType.TRIANGLE to "Triangle",
             GridType.HEXAGON to "Hexagon",
             GridType.OCTASQUARE to "Octasquare",
-            GridType.CAIRO to "Cairo Pentagon"
+            GridType.CAIRO to "Cairo Pentagon",
+            GridType.RHOMBILLE to "Rhombille",
+            GridType.SNUB_SQUARE to "Snub Square",
+            GridType.PENROSE to "Penrose"
         )
         
         gridTypes.forEach { (type, name) ->
