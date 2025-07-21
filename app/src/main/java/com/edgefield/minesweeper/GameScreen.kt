@@ -176,7 +176,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(config.touchConfig, waitingForTriple) {
+                .pointerInput(config.touchConfig, waitingForTriple, vm.board) {
                     detectTapGestures(
                         onTap = { offset ->
                             val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
