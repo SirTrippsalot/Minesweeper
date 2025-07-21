@@ -17,6 +17,7 @@ import android.graphics.Canvas
 import android.graphics.Path
 import android.graphics.Paint
 import android.graphics.PointF
+import androidx.compose.ui.geometry.Offset
 import kotlin.math.*
 
 //──────────────────────────────────────────────────────────────────────────────
@@ -312,6 +313,9 @@ class TilingRenderer(val size: Float, bounds: Bounds) {
 
     private fun modelToPixel(v: Vertex): PointF =
         PointF(((v.modelX + offsetX)*size).toFloat(), ((v.modelY + offsetY)*size).toFloat())
+
+    fun modelToOffset(v: Vertex): Offset =
+        Offset(((v.modelX + offsetX)*size).toFloat(), ((v.modelY + offsetY)*size).toFloat())
 
     fun facePath(face: Face): Path {
         val p = Path()
