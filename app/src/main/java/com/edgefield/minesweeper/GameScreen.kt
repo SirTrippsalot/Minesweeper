@@ -93,8 +93,8 @@ private fun GameStatsRow(vm: GameViewModel) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        StatCard("Mines", vm.getRemainingMines().toString())
-        StatCard("Time", "${vm.getElapsedTimeSeconds()}s")
+        StatCard("Mines", "${vm.getRemainingMines()}/${vm.gameConfig.mineCount}")
+        StatCard("Time", vm.getElapsedTimeFormatted())
         StatCard("Moves", vm.stats.totalMoves.toString())
         StatCard("Efficiency", "${vm.stats.efficiency.toInt()}%")
     }
@@ -419,7 +419,7 @@ private fun GameControls(vm: GameViewModel) {
             onClick = { vm.processMarkedTiles() },
             enabled = vm.gameState == GameState.PLAYING
         ) {
-            Text("Process")
+            Text("Reveal Marked")
         }
     }
     
