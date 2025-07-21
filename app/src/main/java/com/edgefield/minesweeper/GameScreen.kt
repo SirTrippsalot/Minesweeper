@@ -135,7 +135,9 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 GridType.HEXAGON -> GridKind.HEXAGON
                 GridType.OCTASQUARE -> GridKind.OCTASQUARE
                 GridType.CAIRO -> GridKind.CAIRO
-                else -> GridKind.SQUARE
+                GridType.RHOMBILLE -> GridKind.RHOMBILLE
+                GridType.SNUB_SQUARE -> GridKind.SNUB_SQUARE
+                GridType.PENROSE -> GridKind.PENROSE
             },
             w = config.cols,
             h = config.rows
@@ -498,18 +500,10 @@ private fun SettingsDialog(
                 
                 Row {
                     Checkbox(
-                        checked = tempConfig.wrapX,
-                        onCheckedChange = { tempConfig = tempConfig.copy(wrapX = it) }
+                        checked = tempConfig.edgeMode,
+                        onCheckedChange = { tempConfig = tempConfig.copy(edgeMode = it) }
                     )
-                    Text("Wrap X")
-                }
-                
-                Row {
-                    Checkbox(
-                        checked = tempConfig.wrapY,
-                        onCheckedChange = { tempConfig = tempConfig.copy(wrapY = it) }
-                    )
-                    Text("Wrap Y")
+                    Text("Edge Mode")
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))

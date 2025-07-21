@@ -25,8 +25,7 @@ data class GameConfig(
     val cols: Int = 10,
     val mineCount: Int = 15,
     val gridType: GridType = GridType.SQUARE,
-    val wrapX: Boolean = false,
-    val wrapY: Boolean = false,
+    val edgeMode: Boolean = true,
     val touchConfig: TouchConfig = TouchConfig()
 )
 
