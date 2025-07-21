@@ -49,12 +49,16 @@ class GameViewModel : ViewModel() {
     }
 
     fun handleTouch(tile: Tile, action: TouchAction) {
-        when (action) {
-            TouchAction.REVEAL -> reveal(tile)
-            TouchAction.FLAG -> toggleFlag(tile)
-            TouchAction.QUESTION -> toggleQuestion(tile)
-            TouchAction.MARK_CYCLE -> cycleMark(tile)
-            TouchAction.NONE -> { /* Do nothing */ }
+        if (engine.isFirstClick) {
+            reveal(tile)
+        } else {
+            when (action) {
+                TouchAction.REVEAL -> reveal(tile)
+                TouchAction.FLAG -> toggleFlag(tile)
+                TouchAction.QUESTION -> toggleQuestion(tile)
+                TouchAction.MARK_CYCLE -> cycleMark(tile)
+                TouchAction.NONE -> { /* Do nothing */ }
+            }
         }
         updateState()
     }

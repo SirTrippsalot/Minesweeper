@@ -88,6 +88,8 @@ class GameEngine(private val config: GameConfig) {
     }
 
     private var firstClick = true
+    val isFirstClick: Boolean
+        get() = firstClick
     
     fun reveal(tile: Tile, countMove: Boolean = true): GameState {
         if (gameState != GameState.PLAYING || tile.revealed || tile.mark == Mark.FLAG) return gameState
@@ -178,10 +180,24 @@ class GameEngine(private val config: GameConfig) {
     fun getRemainingMines(): Int = config.mineCount - getFlagCount()
 
     private fun neighbors(tile: Tile): List<Tile> {
-        // Use GridSystem topology for all neighbor lookups
-        val face = tileToFace[tile] ?: return emptyList()
-        return tiling.neighbours(face).mapNotNull { neighborFace ->
-            faceToTile[neighborFace]
+        return if (config.gridType == GridType.SQUARE) {
+            val out = mutableListOf<Tile>()
+            for (dy in -1..1) {
+                for (dx in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    val nx = tile.x + dx
+                    val ny = tile.y + dy
+                    if (nx in 0 until config.cols && ny in 0 until config.rows) {
+                        out += board[ny][nx]
+                    }
+                }
+            }
+            out
+        } else {
+            val face = tileToFace[tile] ?: return emptyList()
+            tiling.neighbours(face).mapNotNull { neighborFace ->
+                faceToTile[neighborFace]
+            }
         }
     }
 }
