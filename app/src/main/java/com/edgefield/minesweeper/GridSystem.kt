@@ -224,26 +224,31 @@ class TriangleGridBuilder(
     private val SQRT3 = sqrt(3.0)
 
     override fun build(): Tiling {
+        // Precompute all vertex positions on the triangular lattice
+        val vertexGrid = Array(rows + 1) { j ->
+            Array(cols + 1) { i ->
+                val x = i + 0.5 * (j % 2)
+                val y = j * SQRT3 / 2
+                tiling.getVertex(x, y)
+            }
+        }
+
         for (j in 0 until rows) {
-            val baseY = j * SQRT3 / 2
-            val xOff = 0.5 * (j % 2)
+            val rowParity = j % 2
             for (i in 0 until cols) {
-                val x = i + xOff
                 val up = (i + j) % 2 == 0
                 if (up) {
-                    // Upright Δ with unit edge length
-                    val v0 = tiling.getVertex(x, baseY)
-                    val v1 = tiling.getVertex(x + 1.0, baseY)
-                    val v2 = tiling.getVertex(x + 0.5, baseY + SQRT3 / 2)
+                    val v0 = vertexGrid[j][i + rowParity]
+                    val v1 = vertexGrid[j][i + 1 + rowParity]
+                    val v2 = vertexGrid[j + 1][i + ((j + 1) % 2)]
 
                     val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
                     connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
                     registerFace(arrayOf(e0, e1, e2))
                 } else {
-                    // Inverted ∇. Order vertices counter-clockwise for proper twin wiring
-                    val v0 = tiling.getVertex(x, baseY)
-                    val v1 = tiling.getVertex(x + 0.5, baseY + SQRT3 / 2)
-                    val v2 = tiling.getVertex(x - 0.5, baseY + SQRT3 / 2)
+                    val v0 = vertexGrid[j + 1][i + ((j + 1) % 2)]
+                    val v1 = vertexGrid[j][i + 1 + rowParity]
+                    val v2 = vertexGrid[j + 1][i + 1 + ((j + 1) % 2)]
 
                     val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
                     connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
