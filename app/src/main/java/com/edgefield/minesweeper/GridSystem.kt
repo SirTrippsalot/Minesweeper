@@ -32,6 +32,8 @@ class Vertex internal constructor(internal val key: VKey) {
     val modelY : Double = key.y.toDouble() / SCALE
 }
 
+data class Bounds(val minX: Double, val minY: Double, val maxX: Double, val maxY: Double)
+
 //──────────────────────────────────────────────────────────────────────────────
 //  2 ▍ DCEL – minimal half‑edge structure (kept package‑internal)
 //──────────────────────────────────────────────────────────────────────────────
@@ -74,6 +76,21 @@ class Tiling internal constructor(
     internal fun getVertex(x: Double, y: Double): Vertex {
         val key = VKey((x*SCALE).roundToLong(), (y*SCALE).roundToLong())
         return vTable.getOrPut(key) { Vertex(key) }
+    }
+
+    /** Axis-aligned bounding box in model coordinates. */
+    fun modelBounds(): Bounds {
+        var minX = Double.POSITIVE_INFINITY
+        var minY = Double.POSITIVE_INFINITY
+        var maxX = Double.NEGATIVE_INFINITY
+        var maxY = Double.NEGATIVE_INFINITY
+        vTable.values.forEach { v ->
+            if (v.modelX < minX) minX = v.modelX
+            if (v.modelX > maxX) maxX = v.modelX
+            if (v.modelY < minY) minY = v.modelY
+            if (v.modelY > maxY) maxY = v.modelY
+        }
+        return Bounds(minX, minY, maxX, maxY)
     }
 }
 
@@ -287,9 +304,14 @@ abstract class ExoticBuilder : GridBuilder() {
 //  6 ▍ Rendering helpers (Android Canvas)
 //──────────────────────────────────────────────────────────────────────────────
 
-class TilingRenderer(val size: Float) {
-    private fun modelToPixel(v: Vertex): PointF = 
-        PointF((v.modelX*size).toFloat(), (v.modelY*size).toFloat())
+class TilingRenderer(val size: Float, bounds: Bounds) {
+    private val offsetX = -bounds.minX
+    private val offsetY = -bounds.minY
+    val width: Float = ((bounds.maxX - bounds.minX)*size).toFloat()
+    val height: Float = ((bounds.maxY - bounds.minY)*size).toFloat()
+
+    private fun modelToPixel(v: Vertex): PointF =
+        PointF(((v.modelX + offsetX)*size).toFloat(), ((v.modelY + offsetY)*size).toFloat())
 
     fun facePath(face: Face): Path {
         val p = Path()
