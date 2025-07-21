@@ -224,28 +224,27 @@ class TriangleGridBuilder(
 
     override fun build(): Tiling {
         for (j in 0 until rows) {
+            val baseY = j * SQRT3 / 2
             for (i in 0 until cols) {
                 val up = (i + j) % 2 == 0
                 if (up) {
-                    // upright Δ - use consistent vertical spacing
-                    val baseY = j*SQRT3/2
-                    val v0 = tiling.getVertex(i*0.5, baseY)
-                    val v1 = tiling.getVertex((i+1)*0.5, baseY)
-                    val v2 = tiling.getVertex(i*0.5 + 0.25, (j+1)*SQRT3/2)
+                    // Upright Δ with unit edge length
+                    val v0 = tiling.getVertex(i.toDouble(), baseY)
+                    val v1 = tiling.getVertex(i + 1.0, baseY)
+                    val v2 = tiling.getVertex(i + 0.5, baseY + SQRT3 / 2)
 
                     val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
-                    connectTwin(v0,v1,e0); connectTwin(v1,v2,e1); connectTwin(v2,v0,e2)
-                    registerFace(arrayOf(e0,e1,e2))
+                    connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
+                    registerFace(arrayOf(e0, e1, e2))
                 } else {
-                    // inverted ∇ – shift half height, same vertical scaling
-                    val baseY = j*SQRT3/2
-                    val v0 = tiling.getVertex(i*0.5 + 0.25, (j+1)*SQRT3/2)
-                    val v1 = tiling.getVertex((i+1)*0.5 + 0.25, (j+1)*SQRT3/2)
-                    val v2 = tiling.getVertex((i+1)*0.5, baseY)
+                    // Inverted ∇ shifted half a row down
+                    val v0 = tiling.getVertex(i.toDouble(), baseY + SQRT3 / 2)
+                    val v1 = tiling.getVertex(i + 0.5, baseY)
+                    val v2 = tiling.getVertex(i + 1.0, baseY + SQRT3 / 2)
 
                     val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
-                    connectTwin(v0,v1,e0); connectTwin(v1,v2,e1); connectTwin(v2,v0,e2)
-                    registerFace(arrayOf(e0,e1,e2))
+                    connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
+                    registerFace(arrayOf(e0, e1, e2))
                 }
             }
         }
