@@ -20,6 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.rememberCoroutineScope
+import android.view.ViewConfiguration
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -164,18 +168,36 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 height = tileSize * config.rows
             )
     ) {
+        val coroutineScope = rememberCoroutineScope()
+        var waitingForTriple by remember { mutableStateOf(false) }
+        var doubleTapOffset by remember { mutableStateOf(Offset.Zero) }
+        val tripleTimeout = ViewConfiguration.getDoubleTapTimeout().toLong()
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(config.touchConfig) {
+                .pointerInput(config.touchConfig, waitingForTriple) {
                     detectTapGestures(
                         onTap = { offset ->
                             val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
-                            tile?.let { vm.handleTouch(it, config.touchConfig.singleTap) }
+                            if (waitingForTriple) {
+                                waitingForTriple = false
+                                tile?.let { vm.handleTouch(it, config.touchConfig.tripleTap) }
+                            } else {
+                                tile?.let { vm.handleTouch(it, config.touchConfig.singleTap) }
+                            }
                         },
                         onDoubleTap = { offset ->
-                            val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
-                            tile?.let { vm.handleTouch(it, config.touchConfig.doubleTap) }
+                            waitingForTriple = true
+                            doubleTapOffset = offset
+                            coroutineScope.launch {
+                                delay(tripleTimeout)
+                                if (waitingForTriple) {
+                                    waitingForTriple = false
+                                    val tile = getTileFromGridSystem(doubleTapOffset, tiling, tileToFace, renderer)
+                                    tile?.let { vm.handleTouch(it, config.touchConfig.doubleTap) }
+                                }
+                            }
                         },
                         onLongPress = { offset ->
                             val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
@@ -406,6 +428,7 @@ private fun GameControls(vm: GameViewModel) {
     Text(
         "Controls: Single Tap = ${vm.gameConfig.touchConfig.singleTap.displayName()}, " +
         "Double Tap = ${vm.gameConfig.touchConfig.doubleTap.displayName()}, " +
+        "Triple Tap = ${vm.gameConfig.touchConfig.tripleTap.displayName()}, " +
         "Long Press = ${vm.gameConfig.touchConfig.longPress.displayName()}",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
