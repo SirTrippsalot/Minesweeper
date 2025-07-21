@@ -129,7 +129,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     val config = vm.gameConfig
     val density = LocalDensity.current.density
     val tileSizePx = tileSize.value * density
-    
+
     // Create tiling using GridSystem
     val tiling = remember(config.gridType, config.cols, config.rows) {
         GridFactory.build(
@@ -147,8 +147,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
             h = config.rows
         )
     }
-    
-    val renderer = remember(tileSizePx) { TilingRenderer(tileSizePx) }
+    val bounds = remember(tiling) { tiling.modelBounds() }
+    val renderer = remember(tileSizePx, bounds) { TilingRenderer(tileSizePx, bounds) }
     
     // Map tiles to faces (same order as GameEngine)
     val tileToFace = remember(tiling, vm.board) {
@@ -164,8 +164,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     Box(
         modifier = Modifier
             .size(
-                width = tileSize * config.cols,
-                height = tileSize * config.rows
+                width = (renderer.width / density).dp,
+                height = (renderer.height / density).dp
             )
     ) {
         val coroutineScope = rememberCoroutineScope()
