@@ -89,7 +89,7 @@ class GameEngine(private val config: GameConfig) {
 
     private var firstClick = true
     
-    fun reveal(tile: Tile): GameState {
+    fun reveal(tile: Tile, countMove: Boolean = true): GameState {
         if (gameState != GameState.PLAYING || tile.revealed || tile.mark == Mark.FLAG) return gameState
         
         // First click should always be safe
@@ -99,7 +99,7 @@ class GameEngine(private val config: GameConfig) {
         }
         
         tile.revealed = true
-        stats.totalMoves++
+        if (countMove) stats.totalMoves++
         
         return if (tile.hasMine) {
             gameState = GameState.LOST
@@ -107,7 +107,7 @@ class GameEngine(private val config: GameConfig) {
             gameState
         } else {
             if (tile.adjMines == 0) {
-                neighbors(tile).forEach { reveal(it) }
+                neighbors(tile).forEach { reveal(it, countMove = false) }
             }
             checkWinCondition()
         }
@@ -142,7 +142,6 @@ class GameEngine(private val config: GameConfig) {
         
         val oldMark = tile.mark
         tile.mark = mark
-        stats.totalMoves++
         
         // Update mine tracking
         when {
@@ -152,23 +151,13 @@ class GameEngine(private val config: GameConfig) {
     }
     
     fun processMarkedTiles(): Int {
-        var processed = 0
-        board.flatten().forEach { tile ->
-            if (tile.revealed && tile.adjMines > 0) {
-                val flaggedNeighbors = neighbors(tile).count { it.mark == Mark.FLAG }
-                if (flaggedNeighbors == tile.adjMines) {
-                    // Auto-reveal unflagged neighbors
-                    neighbors(tile).filter { !it.revealed && it.mark != Mark.FLAG }.forEach {
-                        reveal(it)
-                        processed++
-                    }
-                }
-            }
-        }
-        if (processed > 0) {
+        val toReveal = board.flatten().filter { it.mark == Mark.QUESTION && !it.revealed }
+        toReveal.forEach { reveal(it, countMove = false) }
+        if (toReveal.isNotEmpty()) {
             stats.processCount++
+            stats.totalMoves++
         }
-        return processed
+        return toReveal.size
     }
 
     private fun checkWinCondition(): GameState {

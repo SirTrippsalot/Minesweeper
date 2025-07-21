@@ -24,6 +24,9 @@ class GameViewModel : ViewModel() {
         private set
     var stats by mutableStateOf(GameStats())
         private set
+
+    var elapsedTimeMs by mutableStateOf(0L)
+        private set
     
     init {
         Log.d("GameViewModel", "Initializing GameViewModel")
@@ -110,26 +113,25 @@ class GameViewModel : ViewModel() {
             totalMoves = engine.stats.totalMoves,
             minesFound = engine.stats.minesFound
         )
+        elapsedTimeMs = stats.elapsedTime
     }
     
     fun getRemainingMines(): Int = engine.getRemainingMines()
     
-    fun getElapsedTimeSeconds(): Long = stats.elapsedTime / 1000
+    fun getElapsedTimeFormatted(): String {
+        val totalSeconds = elapsedTimeMs / 1000
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return "%d:%02d".format(minutes, seconds)
+    }
     
     private fun startTimer() {
+        elapsedTimeMs = 0L
         viewModelScope.launch {
             while (isActive) {
-                delay(1000) // Update every second
+                delay(1000)
                 if (gameState == GameState.PLAYING) {
-                    // Force recomposition by creating completely new stats object
-                    val currentTime = System.currentTimeMillis()
-                    stats = GameStats(
-                        startTime = engine.stats.startTime,
-                        endTime = null, // Keep null while playing
-                        processCount = engine.stats.processCount,
-                        totalMoves = engine.stats.totalMoves,
-                        minesFound = engine.stats.minesFound
-                    )
+                    elapsedTimeMs = System.currentTimeMillis() - stats.startTime
                 }
             }
         }
