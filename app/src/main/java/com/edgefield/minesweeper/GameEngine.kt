@@ -198,24 +198,27 @@ class GameEngine(private val config: GameConfig) {
     fun getRemainingMines(): Int = config.mineCount - getFlagCount()
 
     private fun neighbors(tile: Tile): List<Tile> {
-        return if (config.gridType == GridType.SQUARE) {
-            val out = mutableListOf<Tile>()
-            for (dy in -1..1) {
-                for (dx in -1..1) {
-                    if (dx == 0 && dy == 0) continue
-                    val nx = tile.x + dx
-                    val ny = tile.y + dy
-                    if (nx in 0 until config.cols && ny in 0 until config.rows) {
-                        out += board[ny][nx]
+        // Base neighbours via GridSystem topology
+        val face = tileToFace[tile] ?: return emptyList()
+        val adjacent = tiling.neighbours(face).mapNotNull { neighborFace ->
+            faceToTile[neighborFace]
+        }.toMutableList()
+
+        if (config.gridType == GridType.SQUARE) {
+            // Add diagonal neighbours that aren't represented in the topology
+            val diagOffsets = listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)
+            diagOffsets.forEach { (dx, dy) ->
+                val nx = tile.x + dx
+                val ny = tile.y + dy
+                if (nx in 0 until config.cols && ny in 0 until config.rows) {
+                    val diagTile = board[ny][nx]
+                    if (diagTile !in adjacent) {
+                        adjacent += diagTile
                     }
                 }
             }
-            out
-        } else {
-            val face = tileToFace[tile] ?: return emptyList()
-            tiling.neighbours(face).mapNotNull { neighborFace ->
-                faceToTile[neighborFace]
-            }
         }
+
+        return adjacent
     }
 }
