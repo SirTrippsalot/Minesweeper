@@ -60,7 +60,7 @@ class GameEngine(private val config: GameConfig) {
             val c = Random.nextInt(config.cols)
             val t = board[r][c]
             if (!t.hasMine) {
-                board[r][c] = t.copy(hasMine = true)
+                t.hasMine = true
                 placed++
             }
         }
@@ -98,7 +98,7 @@ class GameEngine(private val config: GameConfig) {
     private fun ensureSafeFirstClick(firstTile: Tile) {
         if (firstTile.hasMine) {
             // Move the mine to a different location
-            board[firstTile.y][firstTile.x] = firstTile.copy(hasMine = false)
+            firstTile.hasMine = false
             
             // Find a new location for the mine
             var placed = false
@@ -107,7 +107,7 @@ class GameEngine(private val config: GameConfig) {
                 val c = Random.nextInt(config.cols)
                 val candidate = board[r][c]
                 if (!candidate.hasMine && candidate != firstTile) {
-                    board[r][c] = candidate.copy(hasMine = true)
+                    candidate.hasMine = true
                     placed = true
                 }
             }
