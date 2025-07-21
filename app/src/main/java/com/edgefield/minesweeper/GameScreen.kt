@@ -2,6 +2,7 @@ package com.edgefield.minesweeper
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -149,7 +151,10 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     }
     val bounds = remember(tiling) { tiling.modelBounds() }
     val renderer = remember(tileSizePx, bounds) { TilingRenderer(tileSizePx, bounds) }
-    
+
+    var zoom by remember(config) { mutableStateOf(1f) }
+    var pan by remember(config) { mutableStateOf(Offset.Zero) }
+
     // Map tiles to faces (same order as GameEngine)
     val tileToFace = remember(tiling, vm.board) {
         val map = mutableMapOf<Tile, Face>()
@@ -163,10 +168,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     
     Box(
         modifier = Modifier
-            .size(
-                width = (renderer.width / density).dp,
-                height = (renderer.height / density).dp
-            )
+            .fillMaxSize()
     ) {
         val coroutineScope = rememberCoroutineScope()
         var waitingForTriple by remember { mutableStateOf(false) }
@@ -176,10 +178,29 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, panChange, zoomChange, _ ->
+                        zoom = (zoom * zoomChange).coerceIn(0.5f, 4f)
+                        pan += panChange
+                    }
+                }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val scroll = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                            if (scroll != 0f) {
+                                zoom = (zoom * (1f - scroll * 0.001f)).coerceIn(0.5f, 4f)
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    }
+                }
                 .pointerInput(config.touchConfig, waitingForTriple) {
                     detectTapGestures(
                         onTap = { offset ->
-                            val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
+                            val adj = (offset - pan) / zoom
+                            val tile = getTileFromGridSystem(adj, tiling, tileToFace, renderer)
                             if (waitingForTriple) {
                                 waitingForTriple = false
                                 tile?.let { vm.handleTouch(it, config.touchConfig.tripleTap) }
@@ -189,7 +210,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         },
                         onDoubleTap = { offset ->
                             waitingForTriple = true
-                            doubleTapOffset = offset
+                            doubleTapOffset = (offset - pan) / zoom
                             coroutineScope.launch {
                                 delay(tripleTimeout)
                                 if (waitingForTriple) {
@@ -200,13 +221,19 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             }
                         },
                         onLongPress = { offset ->
-                            val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
+                            val adj = (offset - pan) / zoom
+                            val tile = getTileFromGridSystem(adj, tiling, tileToFace, renderer)
                             tile?.let { vm.handleTouch(it, config.touchConfig.longPress) }
                         }
                     )
                 }
         ) {
-            drawGameBoardWithGridSystem(vm.board, vm.gameState, tiling, tileToFace, renderer)
+            withTransform({
+                translate(pan.x, pan.y)
+                scale(zoom, zoom)
+            }) {
+                drawGameBoardWithGridSystem(vm.board, vm.gameState, tiling, tileToFace, renderer)
+            }
         }
         
         // Overlay text numbers on top
@@ -220,7 +247,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         text = tile.adjMines.toString(),
                         color = when (tile.adjMines) {
                             1 -> Color.Blue
-                            2 -> Color.Green  
+                            2 -> Color.Green
                             3 -> Color.Red
                             4 -> Color(0xFF800080) // Purple
                             5 -> Color(0xFF800000) // Maroon
@@ -229,14 +256,14 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             8 -> Color.Gray
                             else -> Color.Black
                         },
-                        fontSize = (tileSize.value * 0.4f).sp,
+                        fontSize = (tileSize.value * zoom * 0.4f).sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .offset(
-                                x = (center.x / density - tileSize.value * 0.5f).dp,
-                                y = (center.y / density - tileSize.value * 0.5f).dp
+                                x = ((center.x * zoom + pan.x) / density - tileSize.value * zoom * 0.5f).dp,
+                                y = ((center.y * zoom + pan.y) / density - tileSize.value * zoom * 0.5f).dp
                             )
-                            .size(tileSize)
+                            .size(tileSize * zoom)
                             .wrapContentSize(Alignment.Center)
                     )
                 }
