@@ -240,10 +240,10 @@ class TriangleGridBuilder(
                     connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
                     registerFace(arrayOf(e0, e1, e2))
                 } else {
-                    // Inverted ∇ shifted half a row down and half cell left/right
+                    // Inverted ∇. Order vertices counter-clockwise for proper twin wiring
                     val v0 = tiling.getVertex(x, baseY)
-                    val v1 = tiling.getVertex(x - 0.5, baseY + SQRT3 / 2)
-                    val v2 = tiling.getVertex(x + 0.5, baseY + SQRT3 / 2)
+                    val v1 = tiling.getVertex(x + 0.5, baseY + SQRT3 / 2)
+                    val v2 = tiling.getVertex(x - 0.5, baseY + SQRT3 / 2)
 
                     val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
                     connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
