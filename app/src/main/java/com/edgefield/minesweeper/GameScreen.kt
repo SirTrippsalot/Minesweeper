@@ -5,6 +5,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,8 +55,14 @@ fun GameScreen(vm: GameViewModel) {
                 IconButton(onClick = { showSettings = true }) {
                     Icon(Icons.Default.Settings, contentDescription = "Settings")
                 }
-                Button(onClick = vm::reset) {
-                    Text("Restart")
+                IconButton(onClick = vm::reset) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Restart")
+                }
+                IconButton(
+                    onClick = { vm.processMarkedTiles() },
+                    enabled = vm.gameState == GameState.PLAYING
+                ) {
+                    Icon(Icons.Default.Done, contentDescription = "Reveal Marked")
                 }
             }
         }
@@ -373,7 +381,7 @@ private fun DrawScope.drawGameBoardWithGridSystem(
 
 private fun getTileColor(tile: Tile, gameState: GameState): Color {
     return when {
-        !tile.revealed && tile.mark == Mark.FLAG -> Color(0xFF4CAF50) // Green for flags
+        !tile.revealed && tile.mark == Mark.FLAG -> Color(0xFF9E9E9E) // Same gray as unrevealed
         !tile.revealed && tile.mark == Mark.QUESTION -> Color(0xFFFF9800) // Orange for questions
         !tile.revealed -> Color(0xFF9E9E9E) // Gray for unrevealed
         tile.hasMine && gameState == GameState.LOST -> Color(0xFFF44336) // Red for mines
@@ -392,12 +400,14 @@ private fun DrawScope.drawTileOverlays(tile: Tile, center: Offset, tileSizePx: F
             center = center
         )
     } else if (!tile.revealed && tile.mark == Mark.FLAG) {
-        // Draw flag
-        drawCircle(
-            color = Color.Red,
-            radius = tileSizePx * 0.1f,
-            center = center
-        )
+        // Draw green checkmark
+        val stroke = 2.dp.toPx()
+        val size = tileSizePx * 0.4f
+        val start = Offset(center.x - size / 2f, center.y)
+        val mid = Offset(center.x - size / 8f, center.y + size / 2f)
+        val end = Offset(center.x + size / 2f, center.y - size / 2f)
+        drawLine(Color(0xFF4CAF50), start, mid, strokeWidth = stroke)
+        drawLine(Color(0xFF4CAF50), mid, end, strokeWidth = stroke)
     } else if (!tile.revealed && tile.mark == Mark.QUESTION) {
         // Draw question mark
         drawCircle(
@@ -411,18 +421,6 @@ private fun DrawScope.drawTileOverlays(tile: Tile, center: Offset, tileSizePx: F
 
 @Composable
 private fun GameControls(vm: GameViewModel) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        Button(
-            onClick = { vm.processMarkedTiles() },
-            enabled = vm.gameState == GameState.PLAYING
-        ) {
-            Text("Reveal Marked")
-        }
-    }
-    
     Spacer(modifier = Modifier.height(8.dp))
     
     Text(
