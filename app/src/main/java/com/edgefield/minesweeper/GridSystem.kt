@@ -195,7 +195,7 @@ class HexGridBuilder(
         for (r in 0 until h) {
             for (q in 0 until w) {
                 val cx = 1.5 * q
-                val cy = SQRT3 * (r + q/2.0)
+                val cy = SQRT3 * r + (SQRT3/2) * (q % 2)
 
                 // 6 corners, 0° first → counter‑clockwise
                 // Use a global orientation so adjacent cells share vertices
