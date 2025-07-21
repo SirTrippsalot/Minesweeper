@@ -56,7 +56,15 @@ class Tiling internal constructor(
         val out = mutableListOf<Face>()
         var e = f.any
         do {
-            out += e.twin.face
+            try {
+                val twinFace = e.twin.face
+                // Only add if it's not the boundary face (has sides > 0)
+                if (twinFace.sides > 0) {
+                    out += twinFace
+                }
+            } catch (ex: UninitializedPropertyAccessException) {
+                // Skip boundary edges that don't have twins
+            }
             e = e.next
         } while(e !== f.any)
         return out
@@ -89,6 +97,28 @@ abstract class GridBuilder {
         } ?: run {
             edgeMap[Pair(u.key,v.key)] = e
         }
+    }
+    
+    /** Call this after all faces are registered to create boundary twins */
+    protected fun finalizeTwins() {
+        // Create a single boundary face for all boundary edges
+        val boundaryFace = Face(0) // 0 sides for boundary
+        
+        // Create boundary twins for any unmatched edges
+        edgeMap.values.forEach { edge ->
+            try {
+                edge.twin // Try to access twin
+            } catch (e: UninitializedPropertyAccessException) {
+                // Create a boundary twin that points back to itself
+                val boundaryTwin = HalfEdge(edge.next.origin)
+                edge.twin = boundaryTwin
+                boundaryTwin.twin = edge
+                boundaryTwin.face = boundaryFace
+                boundaryTwin.next = boundaryTwin
+                boundaryTwin.prev = boundaryTwin
+            }
+        }
+        edgeMap.clear()
     }
 
     /** Call this from your subclass once per finished polygon. */
@@ -131,6 +161,7 @@ class SquareGridBuilder(
                 registerFace(arrayOf(e0,e1,e2,e3))
             }
         }
+        finalizeTwins()
         return tiling
     }
 }
@@ -161,6 +192,7 @@ class HexGridBuilder(
                 registerFace(edges)
             }
         }
+        finalizeTwins()
         return tiling
     }
 }
@@ -197,6 +229,7 @@ class TriangleGridBuilder(
                 }
             }
         }
+        finalizeTwins()
         return tiling
     }
 }

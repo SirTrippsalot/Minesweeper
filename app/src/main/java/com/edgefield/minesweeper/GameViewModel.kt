@@ -1,6 +1,7 @@
 // ───────────────── GameViewModel.kt ─────────────────
 package com.edgefield.minesweeper
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -15,17 +16,33 @@ class GameViewModel : ViewModel() {
     var gameConfig by mutableStateOf(GameConfig())
         private set
     
-    private var engine = GameEngine(gameConfig)
+    private var engine: GameEngine
     
-    var board by mutableStateOf(engine.board)
+    var board by mutableStateOf(arrayOf<Array<Tile>>())
         private set
-    var gameState by mutableStateOf(engine.gameState)
+    var gameState by mutableStateOf(GameState.PLAYING)
         private set
-    var stats by mutableStateOf(engine.stats)
+    var stats by mutableStateOf(GameStats())
         private set
     
     init {
-        startTimer()
+        Log.d("GameViewModel", "Initializing GameViewModel")
+        try {
+            Log.d("GameViewModel", "Creating GameEngine with config: $gameConfig")
+            engine = GameEngine(gameConfig)
+            Log.d("GameViewModel", "GameEngine created successfully")
+            
+            board = engine.board
+            gameState = engine.gameState
+            stats = engine.stats
+            
+            Log.d("GameViewModel", "Starting timer")
+            startTimer()
+            Log.d("GameViewModel", "GameViewModel initialization complete")
+        } catch (e: Exception) {
+            Log.e("GameViewModel", "Error initializing GameViewModel", e)
+            throw e
+        }
     }
 
     fun handleTouch(tile: Tile, action: TouchAction) {

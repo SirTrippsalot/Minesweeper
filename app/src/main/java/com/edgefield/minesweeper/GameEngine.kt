@@ -1,6 +1,7 @@
 // ───────────────── GameEngine.kt ─────────────────
 package com.edgefield.minesweeper
 
+import android.util.Log
 import kotlin.random.Random
 
 class GameEngine(private val config: GameConfig) {
@@ -35,8 +36,23 @@ class GameEngine(private val config: GameConfig) {
     val stats = GameStats()
     
     init {
-        initializeTileToFaceMapping()
-        seedMinesAndNumbers() 
+        Log.d("GameEngine", "Initializing GameEngine with config: rows=${config.rows}, cols=${config.cols}, mines=${config.mineCount}, gridType=${config.gridType}")
+        try {
+            Log.d("GameEngine", "Creating tiling...")
+            // Tiling is already created above
+            Log.d("GameEngine", "Tiling created with ${tiling.faces.size} faces")
+            
+            Log.d("GameEngine", "Initializing tile-to-face mapping...")
+            initializeTileToFaceMapping()
+            Log.d("GameEngine", "Tile-to-face mapping complete")
+            
+            Log.d("GameEngine", "Seeding mines and numbers...")
+            seedMinesAndNumbers()
+            Log.d("GameEngine", "GameEngine initialization complete")
+        } catch (e: Exception) {
+            Log.e("GameEngine", "Error initializing GameEngine", e)
+            throw e
+        }
     }
     
     private fun initializeTileToFaceMapping() {
