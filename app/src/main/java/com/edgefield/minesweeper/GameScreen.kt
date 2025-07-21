@@ -168,7 +168,10 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     
     Box(
         modifier = Modifier
-            .fillMaxSize()
+            .size(
+                width = (renderer.width / density).dp,
+                height = (renderer.height / density).dp
+            )
     ) {
         val coroutineScope = rememberCoroutineScope()
         var waitingForTriple by remember { mutableStateOf(false) }
