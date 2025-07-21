@@ -279,9 +279,9 @@ private fun getFaceCentroid(face: Face, renderer: TilingRenderer): Offset {
     
     var e = face.any
     do {
-        val vertex = e.origin
-        sumX += (vertex.modelX * renderer.size).toFloat()
-        sumY += (vertex.modelY * renderer.size).toFloat()
+        val pt = renderer.modelToOffset(e.origin)
+        sumX += pt.x
+        sumY += pt.y
         count++
         e = e.next
     } while (e !== face.any)
@@ -339,15 +339,13 @@ private fun DrawScope.drawGameBoardWithGridSystem(
             var first = true
             
             do {
-                val vertex = e.origin
-                val x = (vertex.modelX * renderer.size).toFloat()
-                val y = (vertex.modelY * renderer.size).toFloat()
-                
+                val pt = renderer.modelToOffset(e.origin)
+
                 if (first) {
-                    path.moveTo(x, y)
+                    path.moveTo(pt.x, pt.y)
                     first = false
                 } else {
-                    path.lineTo(x, y)
+                    path.lineTo(pt.x, pt.y)
                 }
                 e = e.next
             } while (e !== face.any)
