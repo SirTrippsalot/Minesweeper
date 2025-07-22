@@ -38,6 +38,10 @@ private const val GHOST_ALPHA = 0.4f
 
 private fun Color.ghostly(isGhost: Boolean) = if (isGhost) copy(alpha = GHOST_ALPHA) else this
 
+private fun Offset.isZeroish(epsilon: Float = 0.5f): Boolean {
+    return kotlin.math.abs(x) < epsilon && kotlin.math.abs(y) < epsilon
+}
+
 @Composable
 fun GameScreen(vm: GameViewModel) {
     var showSettings by remember { mutableStateOf(false) }
@@ -432,7 +436,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                                 baseCenter.x + step.x - wrappedCenter.x,
                                 baseCenter.y + step.y - wrappedCenter.y
                             )
-                            if (offset != Offset.Zero) {
+                            if (!offset.isZeroish()) {
                                 drawFace(wrappedTile, wrappedFace, offset, true)
                             }
                         }
@@ -541,7 +545,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             baseCenter.x + step.x - wrappedCenter.x,
                             baseCenter.y + step.y - wrappedCenter.y
                         )
-                        if (offset != Offset.Zero) {
+                        if (!offset.isZeroish()) {
                             drawNumber(wrappedTile, wrappedFace, offset, true)
                         }
                     }
