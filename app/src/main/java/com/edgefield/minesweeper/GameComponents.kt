@@ -2,7 +2,6 @@
 package com.edgefield.minesweeper
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,9 +15,11 @@ fun GridTypeSelector(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
+        var expanded by remember { mutableStateOf(false) }
+
         Text("Grid Type", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         val gridTypes = listOf(
             GridType.SQUARE to "Square (Classic)",
             GridType.TRIANGLE to "Triangle",
@@ -29,24 +30,24 @@ fun GridTypeSelector(
             GridType.SNUB_SQUARE to "Snub Square",
             GridType.PENROSE to "Penrose"
         )
-        
-        gridTypes.forEach { (type, name) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = selectedType == type,
-                        onClick = { onTypeSelected(type) }
+
+        val currentName = gridTypes.firstOrNull { it.first == selectedType }?.second ?: ""
+
+        Box {
+            OutlinedButton(onClick = { expanded = true }) {
+                Text(currentName)
+            }
+
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                gridTypes.forEach { (type, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            onTypeSelected(type)
+                            expanded = false
+                        }
                     )
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = selectedType == type,
-                    onClick = { onTypeSelected(type) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(name)
+                }
             }
         }
     }
