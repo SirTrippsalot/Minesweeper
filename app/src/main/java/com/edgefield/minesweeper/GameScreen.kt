@@ -511,7 +511,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
 
 private fun getTileColor(tile: Tile, gameState: GameState): Color {
     return when {
-        !tile.revealed && tile.mark == Mark.FLAG -> Color(0xFF9E9E9E) // Same gray as unrevealed
+        !tile.revealed && tile.mark == Mark.FLAG -> Color(0xFF64B5F6) // Darker blue water for flagged tiles
         !tile.revealed && tile.mark == Mark.QUESTION -> Color(0xFFFF9800) // Orange for questions
         !tile.revealed -> Color(0xFF9E9E9E) // Gray for unrevealed
         tile.hasMine && gameState == GameState.LOST -> Color(0xFFF44336) // Red for mines
