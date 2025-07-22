@@ -112,10 +112,19 @@ private fun computeDirectionOffsets(
             return neighbors.map { it.x - tile.x to it.y - tile.y }
         }
     }
-    val first = board[0][0]
-    val face = tileToFace[first] ?: return emptyList()
-    return tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
-        .map { it.x - first.x to it.y - first.y }
+    return when (kind) {
+        GridKind.SQUARE -> listOf(
+            -1 to 0, 1 to 0, 0 to -1, 0 to 1,
+            -1 to -1, -1 to 1, 1 to -1, 1 to 1
+        )
+        GridKind.TRIANGLE -> listOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
+        else -> {
+            val first = board[0][0]
+            val face = tileToFace[first] ?: return emptyList()
+            tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+                .map { it.x - first.x to it.y - first.y }
+        }
+    }
 }
 
 private fun computeRenderOffsets(
@@ -155,6 +164,34 @@ private fun computeRenderOffsets(
     }
     return out
 }
+
+private val sqrt3 = sqrt(3f)
+
+private val squareOffsets = listOf(
+    -1 to 0, 1 to 0, 0 to -1, 0 to 1,
+    -1 to -1, -1 to 1, 1 to -1, 1 to 1
+)
+
+private fun triangleOffsetsFor(x: Int, y: Int): List<Pair<Int, Int>> =
+    if ((x + y) % 2 == 0) listOf(-1 to 0, 1 to 0, 0 to 1)
+    else listOf(-1 to 0, 1 to 0, 0 to -1)
+
+private fun triangleStep(delta: Pair<Int, Int>, up: Boolean, size: Float): Offset {
+    val half = 0.5f * size
+    val sixth = sqrt3 / 6f * size
+    val third = sqrt3 / 3f * size
+    val twoThird = 2f * sqrt3 / 3f * size
+    return when (delta) {
+        -1 to 0 -> Offset(-half, if (up) sixth else -sixth)
+        1 to 0 -> Offset(half, if (up) sixth else -sixth)
+        0 to 1 -> Offset(0f, if (up) twoThird else third)
+        0 to -1 -> Offset(0f, if (up) -third else -twoThird)
+        else -> Offset.Zero
+    }
+}
+
+private fun squareStep(delta: Pair<Int, Int>, size: Float): Offset =
+    Offset(delta.first * size, delta.second * size)
 
 @Composable
 private fun GameStatsRow(vm: GameViewModel) {
@@ -332,7 +369,12 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 vm.board.flatten().forEach { base ->
                     val baseFace = tileToFace[base] ?: return@forEach
                     val baseCenter = renderer.faceCentroid(baseFace)
-                    directionOffsets.forEach { delta ->
+                    val offsets = when (config.gridType.kind) {
+                        GridKind.TRIANGLE -> triangleOffsetsFor(base.x, base.y)
+                        GridKind.SQUARE -> squareOffsets
+                        else -> directionOffsets
+                    }
+                    offsets.forEach { delta ->
                         val nx = base.x + delta.first
                         val ny = base.y + delta.second
                         if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
@@ -340,8 +382,18 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             val wy = ((ny % config.rows) + config.rows) % config.rows
                             val wrappedTile = vm.board[wy][wx]
                             val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
-                            val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
-                            val step = if (config.gridType.kind == GridKind.HEXAGON && base.x % 2 == 1) pair.second else pair.first
+                            val step = when (config.gridType.kind) {
+                                GridKind.TRIANGLE -> triangleStep(delta, (base.x + base.y) % 2 == 0, renderer.size)
+                                GridKind.SQUARE -> squareStep(delta, renderer.size)
+                                GridKind.HEXAGON -> {
+                                    val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
+                                    if (base.x % 2 == 1) pair.second else pair.first
+                                }
+                                else -> {
+                                    val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
+                                    pair.first
+                                }
+                            }
                             val wrappedCenter = renderer.faceCentroid(wrappedFace)
                             val offset = Offset(
                                 baseCenter.x + step.x - wrappedCenter.x,
@@ -415,7 +467,12 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
             vm.board.flatten().forEach { base ->
                 val baseFace = tileToFace[base] ?: return@forEach
                 val baseCenter = renderer.faceCentroid(baseFace)
-                directionOffsets.forEach { delta ->
+                val offsets = when (config.gridType.kind) {
+                    GridKind.TRIANGLE -> triangleOffsetsFor(base.x, base.y)
+                    GridKind.SQUARE -> squareOffsets
+                    else -> directionOffsets
+                }
+                offsets.forEach { delta ->
                     val nx = base.x + delta.first
                     val ny = base.y + delta.second
                     if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
@@ -423,8 +480,18 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         val wy = ((ny % config.rows) + config.rows) % config.rows
                         val wrappedTile = vm.board[wy][wx]
                         val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
-                        val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
-                        val step = if (config.gridType.kind == GridKind.HEXAGON && base.x % 2 == 1) pair.second else pair.first
+                        val step = when (config.gridType.kind) {
+                            GridKind.TRIANGLE -> triangleStep(delta, (base.x + base.y) % 2 == 0, renderer.size)
+                            GridKind.SQUARE -> squareStep(delta, renderer.size)
+                            GridKind.HEXAGON -> {
+                                val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
+                                if (base.x % 2 == 1) pair.second else pair.first
+                            }
+                            else -> {
+                                val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
+                                pair.first
+                            }
+                        }
                         val wrappedCenter = renderer.faceCentroid(wrappedFace)
                         val offset = Offset(
                             baseCenter.x + step.x - wrappedCenter.x,
