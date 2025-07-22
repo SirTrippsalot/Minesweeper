@@ -378,7 +378,16 @@ class TilingRenderer(val size: Float, bounds: Bounds) {
 //  7 ▍ Convenience factory so the caller never sees builder classes directly
 //──────────────────────────────────────────────────────────────────────────────
 
-enum class GridKind { SQUARE, TRIANGLE, HEXAGON, OCTASQUARE, CAIRO, RHOMBILLE, SNUB_SQUARE, PENROSE }
+enum class GridKind(val neighborCount: Int) {
+    SQUARE(8),
+    TRIANGLE(3),
+    HEXAGON(6),
+    OCTASQUARE(8),
+    CAIRO(5),
+    RHOMBILLE(6),
+    SNUB_SQUARE(5),
+    PENROSE(6)
+}
 
 object GridFactory {
     fun build(kind: GridKind, w:Int, h:Int = w): Tiling = when(kind) {
