@@ -63,18 +63,18 @@ fun GameScreen(vm: GameViewModel) {
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Mines: ${$'vm.getRemainingMines()}/${$'vm.gameConfig.mineCount}",
+                        "Mines: ${vm.getRemainingMines()}/${vm.gameConfig.mineCount}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(" > ")
                     Text(
-                        "Time: ${$'vm.getElapsedTimeFormatted()}",
+                        "Time: ${vm.getElapsedTimeFormatted()}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(" > ")
                     Text(
-                        "Moves: ${$'vm.stats.totalMoves}",
+                        "Moves: ${vm.stats.totalMoves}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
