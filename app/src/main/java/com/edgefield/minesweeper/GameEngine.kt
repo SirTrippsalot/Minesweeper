@@ -78,6 +78,18 @@ class GameEngine(private val config: GameConfig) {
     private var firstClick = true
     val isFirstClick: Boolean
         get() = firstClick
+
+    /**
+     * Reveal the tile at the given board coordinates. If the tile has zero
+     * adjacent mines, adjacent tiles are automatically revealed in a
+     * breadth-first manner.
+     */
+    fun revealTile(x: Int, y: Int, countMove: Boolean = true): GameState {
+        if (y !in board.indices) return gameState
+        val row = board[y]
+        if (x !in row.indices) return gameState
+        return reveal(row[x], countMove)
+    }
     
     fun reveal(tile: Tile, countMove: Boolean = true): GameState {
         if (gameState != GameState.PLAYING || tile.revealed || tile.mark == Mark.FLAG) return gameState
