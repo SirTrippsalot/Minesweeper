@@ -122,12 +122,14 @@ private fun computeRenderOffsets(
     board: Array<Array<Tile>>,
     renderer: TilingRenderer,
     tileToFace: Map<Tile, Face>,
-    offsets: List<Pair<Int, Int>>
-): Map<Pair<Int, Int>, Offset> {
-    val out = mutableMapOf<Pair<Int, Int>, Offset>()
+    offsets: List<Pair<Int, Int>>,
+    kind: GridKind
+): Map<Pair<Int, Int>, Pair<Offset, Offset>> {
+    val out = mutableMapOf<Pair<Int, Int>, Pair<Offset, Offset>>()
     offsets.forEach { delta ->
         val (dx, dy) = delta
-        var found: Offset? = null
+        var even: Offset? = null
+        var odd: Offset? = null
         outer@ for (y in board.indices) {
             for (x in board[y].indices) {
                 val nx = x + dx
@@ -139,12 +141,17 @@ private fun computeRenderOffsets(
                     val fb = tileToFace[b] ?: continue
                     val ca = renderer.faceCentroid(fa)
                     val cb = renderer.faceCentroid(fb)
-                    found = Offset(cb.x - ca.x, cb.y - ca.y)
-                    break@outer
+                    val diff = Offset(cb.x - ca.x, cb.y - ca.y)
+                    if (even == null) even = diff
+                    if (x % 2 == 1 && odd == null) odd = diff
+                    if (even != null && odd != null) break@outer
                 }
             }
         }
-        out[delta] = found ?: Offset.Zero
+        val fallback = even ?: odd ?: Offset.Zero
+        even = even ?: fallback
+        odd = odd ?: fallback
+        out[delta] = even to if (kind == GridKind.HEXAGON) odd else even
     }
     return out
 }
@@ -219,7 +226,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         computeDirectionOffsets(vm.board, tiling, tileToFace, faceToTile, config.gridType.kind)
     }
     val renderOffsets = remember(renderer, directionOffsets) {
-        computeRenderOffsets(vm.board, renderer, tileToFace, directionOffsets)
+        computeRenderOffsets(vm.board, renderer, tileToFace, directionOffsets, config.gridType.kind)
     }
     
     var scale by remember { mutableStateOf(1f) }
@@ -333,10 +340,13 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             val wy = ((ny % config.rows) + config.rows) % config.rows
                             val wrappedTile = vm.board[wy][wx]
                             val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
-                            val step = renderOffsets[delta] ?: Offset.Zero
+                            val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
+                            val step = if (config.gridType.kind == GridKind.HEXAGON && base.x % 2 == 1) pair.second else pair.first
                             val wrappedCenter = renderer.faceCentroid(wrappedFace)
-                            val offset = Offset(baseCenter.x + step.x - wrappedCenter.x,
-                                baseCenter.y + step.y - wrappedCenter.y)
+                            val offset = Offset(
+                                baseCenter.x + step.x - wrappedCenter.x,
+                                baseCenter.y + step.y - wrappedCenter.y
+                            )
                             drawFace(wrappedTile, wrappedFace, offset)
                         }
                     }
@@ -413,10 +423,13 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         val wy = ((ny % config.rows) + config.rows) % config.rows
                         val wrappedTile = vm.board[wy][wx]
                         val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
-                        val step = renderOffsets[delta] ?: Offset.Zero
+                        val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
+                        val step = if (config.gridType.kind == GridKind.HEXAGON && base.x % 2 == 1) pair.second else pair.first
                         val wrappedCenter = renderer.faceCentroid(wrappedFace)
-                        val offset = Offset(baseCenter.x + step.x - wrappedCenter.x,
-                            baseCenter.y + step.y - wrappedCenter.y)
+                        val offset = Offset(
+                            baseCenter.x + step.x - wrappedCenter.x,
+                            baseCenter.y + step.y - wrappedCenter.y
+                        )
                         drawNumber(wrappedTile, wrappedFace, offset)
                     }
                 }
