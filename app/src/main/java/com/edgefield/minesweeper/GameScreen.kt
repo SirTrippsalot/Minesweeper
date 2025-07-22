@@ -363,6 +363,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         }
         
         // Overlay text numbers on top
+        @Composable
         fun drawNumber(tile: Tile, face: Face, offset: Offset = Offset.Zero) {
             if (tile.revealed && !tile.hasMine && tile.adjMines > 0) {
                 val center = renderer.faceCentroid(face) + offset
