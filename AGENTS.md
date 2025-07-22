@@ -7,8 +7,9 @@
 - Do not commit files in `.gradle/` or other build output directories.
 
 ## Programmatic checks
-- For any changes that touch `app/src` or build files, run `gradle assembleDebug` to ensure the project compiles.
-- Documentation-only changes do not require checks.
+The Android SDK is not available in this environment, so Gradle builds cannot be executed.
+Do not attempt to run any build or test commands.
+No programmatic checks are required for any changes.
 
 ## Commit messages
 - Summarize the change in a short headline under 50 characters.
