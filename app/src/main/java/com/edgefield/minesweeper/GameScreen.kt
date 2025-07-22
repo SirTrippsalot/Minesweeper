@@ -236,6 +236,24 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     drawTileOverlays(tile, center, renderer.size, vm.gameState)
                 }
             }
+
+            // Draw a bold purple outline around the grid
+            tiling.faces.forEach { face ->
+                var edge = face.any
+                do {
+                    if (edge.twin.face.sides == 0) {
+                        val start = renderer.modelToOffset(edge.origin)
+                        val end = renderer.modelToOffset(edge.next.origin)
+                        drawLine(
+                            color = Color(0xFF800080),
+                            start = start,
+                            end = end,
+                            strokeWidth = 4.dp.toPx()
+                        )
+                    }
+                    edge = edge.next
+                } while (edge !== face.any)
+            }
         }
         
         // Overlay text numbers on top
