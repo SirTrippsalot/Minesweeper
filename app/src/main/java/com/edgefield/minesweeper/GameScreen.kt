@@ -53,33 +53,31 @@ fun GameScreen(vm: GameViewModel) {
             .padding(8.dp)
     ) {
         // Top menu with stats and controls
-        Surface(
-            color = Color(0xFFFFF9C4),
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Mines: ${'$'}{vm.getRemainingMines()}/${'$'}{vm.gameConfig.mineCount}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(" > ")
-                Text(
-                    "Time: ${'$'}{vm.getElapsedTimeFormatted()}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(" > ")
-                Text(
-                    "Moves: ${'$'}{vm.stats.totalMoves}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.weight(1f))
+        SmallTopAppBar(
+            modifier = Modifier.fillMaxWidth(),
+            colors = TopAppBarDefaults.smallTopAppBarColors(
+                containerColor = Color(0xFFFFF9C4)
+            ),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Mines: ${'$'}{vm.getRemainingMines()}/${'$'}{vm.gameConfig.mineCount}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(" > ")
+                    Text(
+                        "Time: ${'$'}{vm.getElapsedTimeFormatted()}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(" > ")
+                    Text(
+                        "Moves: ${'$'}{vm.stats.totalMoves}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            },
+            actions = {
                 IconButton(onClick = { showSettings = true }) {
                     Icon(Icons.Default.Settings, contentDescription = "Options")
                 }
@@ -93,7 +91,7 @@ fun GameScreen(vm: GameViewModel) {
                     Icon(Icons.Default.Done, contentDescription = "Reveal Marked")
                 }
             }
-        }
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
