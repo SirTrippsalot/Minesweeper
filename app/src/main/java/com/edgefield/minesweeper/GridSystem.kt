@@ -222,22 +222,14 @@ private val TRIANGLE_DEFINITION = PolygonDefinition(
         1.0 to 0.0,
         0.5 to SQRT3 / 2
     )
-) { c, r, _, idx ->
-    val p = r % 2
-    val q = 1 - p
+) { c, r, v, _ ->
+    val baseX = 0.5 * c
+    val baseY = (SQRT3 / 2) * r
     val up = (c + r) % 2 == 0
     if (up) {
-        when (idx) {
-            0 -> c + 1.5 * p to r * SQRT3 / 2
-            1 -> c + 1 + 1.5 * p to r * SQRT3 / 2
-            else -> c + 1.5 * q to (r + 1) * SQRT3 / 2
-        }
+        baseX + v.first to baseY + v.second
     } else {
-        when (idx) {
-            0 -> c + 1.5 * q to (r + 1) * SQRT3 / 2
-            1 -> c + 1 + 1.5 * p to r * SQRT3 / 2
-            else -> c + 1 + 1.5 * q to (r + 1) * SQRT3 / 2
-        }
+        baseX + (1.0 - v.first) to baseY + (SQRT3 / 2 - v.second)
     }
 }
 
