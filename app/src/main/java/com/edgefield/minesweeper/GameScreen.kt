@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -359,17 +360,26 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 } while (e !== face.any)
                 path.close()
 
-                drawPath(path, color)
+                val center = renderer.faceCentroid(face) + offset
+                if (!tile.revealed) {
+                    val brush = Brush.radialGradient(
+                        colors = listOf(Color(0x80FFFFFF).ghostly(ghost), color),
+                        center = center,
+                        radius = renderer.size
+                    )
+                    drawPath(path = path, brush = brush)
+                } else {
+                    drawPath(path, color)
+                }
                 drawPath(
                     path,
                     Color.Black.ghostly(ghost),
                     style = Stroke(width = 1.dp.toPx())
                 )
 
-                val center = renderer.faceCentroid(face)
                 drawTileOverlays(
                     tile,
-                    center + offset,
+                    center,
                     renderer.size,
                     vm.gameState,
                     ghost
