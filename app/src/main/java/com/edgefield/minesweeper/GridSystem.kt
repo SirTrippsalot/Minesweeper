@@ -225,8 +225,10 @@ class TriangleGridBuilder(
 
     override fun build(): Tiling {
         // Precompute all vertex positions on the triangular lattice
+        // We allocate one extra column of vertices so that the final column
+        // calculations that access i + 1 + rowParity remain safe on odd rows.
         val vertexGrid = Array(rows + 1) { j ->
-            Array(cols + 1) { i ->
+            Array(cols + 2) { i ->
                 val x = i + 0.5 * (j % 2)
                 val y = j * SQRT3 / 2
                 tiling.getVertex(x, y)
