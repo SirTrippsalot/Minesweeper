@@ -2,6 +2,7 @@ package com.edgefield.minesweeper
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -160,12 +162,29 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         mapTilesToFaces(vm.board.flatten(), tiling.faces)
     }
     
+    var scale by remember { mutableStateOf(1f) }
+    var pan by remember { mutableStateOf(Offset.Zero) }
+
     Box(
         modifier = Modifier
             .size(
                 width = (renderer.width / density).dp,
                 height = (renderer.height / density).dp
             )
+            .graphicsLayer {
+                translationX = pan.x
+                translationY = pan.y
+                scaleX = scale
+                scaleY = scale
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, panChange, zoom, _ ->
+                    val oldScale = scale
+                    scale = (scale * zoom).coerceIn(0.5f, 5f)
+                    val scaleDiff = scale / oldScale
+                    pan += panChange + (centroid - pan) * (1 - scaleDiff)
+                }
+            }
     ) {
         val coroutineScope = rememberCoroutineScope()
         var waitingForTriple by remember { mutableStateOf(false) }
