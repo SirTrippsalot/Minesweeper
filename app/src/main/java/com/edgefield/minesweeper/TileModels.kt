@@ -9,6 +9,16 @@ enum class GridType {
     SQUARE, TRIANGLE, HEXAGON, OCTASQUARE, CAIRO, RHOMBILLE, SNUB_SQUARE, PENROSE
 }
 
+enum class Difficulty(val percent: Int) {
+    VERY_EASY(5),
+    EASY(10),
+    MEDIUM(15),
+    HARD(20),
+    VERY_HARD(25),
+    HARDEST(30),
+    CUSTOM(15)
+}
+
 val GridType.kind: GridKind
     get() = GridKind.valueOf(name)
 
@@ -26,11 +36,28 @@ data class TouchConfig(
 data class GameConfig(
     val rows: Int = 10,
     val cols: Int = 10,
-    val mineCount: Int = 15,
+    val difficulty: Difficulty = Difficulty.MEDIUM,
+    val customMines: Int = 15,
+    val useMinePercent: Boolean = false,
     val gridType: GridType = GridType.SQUARE,
     val edgeMode: Boolean = true,
     val touchConfig: TouchConfig = TouchConfig()
-)
+) {
+    val mineCount: Int
+        get() {
+            val cells = rows * cols
+            return when (difficulty) {
+                Difficulty.CUSTOM -> {
+                    if (useMinePercent) {
+                        (cells * customMines / 100.0).toInt().coerceIn(1, cells - 1)
+                    } else {
+                        customMines.coerceIn(1, cells - 1)
+                    }
+                }
+                else -> (cells * difficulty.percent / 100).coerceIn(1, cells - 1)
+            }
+        }
+}
 
 data class GameStats(
     val startTime: Long = System.currentTimeMillis(),

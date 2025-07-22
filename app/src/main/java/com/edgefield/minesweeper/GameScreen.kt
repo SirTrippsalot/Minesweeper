@@ -406,17 +406,37 @@ private fun SettingsDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = tempConfig.mineCount.toString(),
-                    onValueChange = { 
-                        it.toIntOrNull()?.let { mines ->
-                            val maxMines = (tempConfig.rows * tempConfig.cols * 0.3).toInt()
-                            tempConfig = tempConfig.copy(mineCount = mines.coerceIn(1, maxMines))
-                        }
-                    },
-                    label = { Text("Mine Count") }
+
+                DifficultySelector(
+                    selected = tempConfig.difficulty,
+                    onSelected = { tempConfig = tempConfig.copy(difficulty = it) }
                 )
+
+                if (tempConfig.difficulty == Difficulty.CUSTOM) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Use Percentage")
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = tempConfig.useMinePercent,
+                            onCheckedChange = { tempConfig = tempConfig.copy(useMinePercent = it) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = tempConfig.customMines.toString(),
+                        onValueChange = {
+                            it.toIntOrNull()?.let { value ->
+                                val max = tempConfig.rows * tempConfig.cols - 1
+                                tempConfig = tempConfig.copy(customMines = value.coerceIn(1, max))
+                            }
+                        },
+                        label = { Text(if (tempConfig.useMinePercent) "Mine %" else "Mine Count") }
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
