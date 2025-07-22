@@ -32,6 +32,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+private const val GHOST_ALPHA = 0.4f
+
+private fun Color.ghostly(isGhost: Boolean) = if (isGhost) copy(alpha = GHOST_ALPHA) else this
+
 @Composable
 fun GameScreen(vm: GameViewModel) {
     var showSettings by remember { mutableStateOf(false) }
@@ -294,8 +298,13 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     )
                 }
         ) {
-            fun drawFace(tile: Tile, face: Face, offset: Offset = Offset.Zero) {
-                val color = getTileColor(tile, vm.gameState)
+            fun drawFace(
+                tile: Tile,
+                face: Face,
+                offset: Offset = Offset.Zero,
+                ghost: Boolean = false
+            ) {
+                val color = getTileColor(tile, vm.gameState).ghostly(ghost)
 
                 val path = Path()
                 var e = face.any
@@ -314,10 +323,20 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 path.close()
 
                 drawPath(path, color)
-                drawPath(path, Color.Black, style = Stroke(width = 1.dp.toPx()))
+                drawPath(
+                    path,
+                    Color.Black.ghostly(ghost),
+                    style = Stroke(width = 1.dp.toPx())
+                )
 
                 val center = renderer.faceCentroid(face)
-                drawTileOverlays(tile, center + offset, renderer.size, vm.gameState)
+                drawTileOverlays(
+                    tile,
+                    center + offset,
+                    renderer.size,
+                    vm.gameState,
+                    ghost
+                )
             }
 
             // Draw each tile using GridSystem geometry
@@ -347,7 +366,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                                 baseCenter.x + step.x - wrappedCenter.x,
                                 baseCenter.y + step.y - wrappedCenter.y
                             )
-                            drawFace(wrappedTile, wrappedFace, offset)
+                            drawFace(wrappedTile, wrappedFace, offset, true)
                         }
                     }
                 }
@@ -374,7 +393,12 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         
         // Overlay text numbers on top
         @Composable
-        fun drawNumber(tile: Tile, face: Face, offset: Offset = Offset.Zero) {
+        fun drawNumber(
+            tile: Tile,
+            face: Face,
+            offset: Offset = Offset.Zero,
+            ghost: Boolean = false
+        ) {
             if (tile.revealed && !tile.hasMine && tile.adjMines > 0) {
                 val center = renderer.faceCentroid(face) + offset
 
@@ -382,7 +406,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         text = tile.adjMines.toString(),
                         color = when (tile.adjMines) {
                             1 -> Color.Blue
-                            2 -> Color.Green  
+                            2 -> Color.Green
                             3 -> Color.Red
                             4 -> Color(0xFF800080) // Purple
                             5 -> Color(0xFF800000) // Maroon
@@ -390,7 +414,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             7 -> Color.Black
                             8 -> Color.Gray
                             else -> Color.Black
-                        },
+                        }.ghostly(ghost),
                         fontSize = (tileSize.value * 0.4f).sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -430,7 +454,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             baseCenter.x + step.x - wrappedCenter.x,
                             baseCenter.y + step.y - wrappedCenter.y
                         )
-                        drawNumber(wrappedTile, wrappedFace, offset)
+                        drawNumber(wrappedTile, wrappedFace, offset, true)
                     }
                 }
             }
@@ -454,12 +478,18 @@ private fun getTileColor(tile: Tile, gameState: GameState): Color {
     }
 }
 
-private fun DrawScope.drawTileOverlays(tile: Tile, center: Offset, tileSizePx: Float, gameState: GameState) {
+private fun DrawScope.drawTileOverlays(
+    tile: Tile,
+    center: Offset,
+    tileSizePx: Float,
+    gameState: GameState,
+    ghost: Boolean = false
+) {
     // Draw mines, flags, and question marks as overlays
     if (tile.hasMine && gameState == GameState.LOST) {
         // Draw mine
         drawCircle(
-            color = Color.Black,
+            color = Color.Black.ghostly(ghost),
             radius = tileSizePx * 0.15f,
             center = center
         )
@@ -473,20 +503,20 @@ private fun DrawScope.drawTileOverlays(tile: Tile, center: Offset, tileSizePx: F
             val topRight = Offset(center.x + half, center.y - half)
             val bottomLeft = Offset(center.x - half, center.y + half)
             val bottomRight = Offset(center.x + half, center.y + half)
-            drawLine(Color.Red, topLeft, bottomRight, strokeWidth = stroke)
-            drawLine(Color.Red, topRight, bottomLeft, strokeWidth = stroke)
+            drawLine(Color.Red.ghostly(ghost), topLeft, bottomRight, strokeWidth = stroke)
+            drawLine(Color.Red.ghostly(ghost), topRight, bottomLeft, strokeWidth = stroke)
         } else {
             // Draw green checkmark
             val start = Offset(center.x - size / 2f, center.y)
             val mid = Offset(center.x - size / 8f, center.y + size / 2f)
             val end = Offset(center.x + size / 2f, center.y - size / 2f)
-            drawLine(Color(0xFF4CAF50), start, mid, strokeWidth = stroke)
-            drawLine(Color(0xFF4CAF50), mid, end, strokeWidth = stroke)
+            drawLine(Color(0xFF4CAF50).ghostly(ghost), start, mid, strokeWidth = stroke)
+            drawLine(Color(0xFF4CAF50).ghostly(ghost), mid, end, strokeWidth = stroke)
         }
     } else if (!tile.revealed && tile.mark == Mark.QUESTION) {
         // Draw question mark
         drawCircle(
-            color = Color.Blue,
+            color = Color.Blue.ghostly(ghost),
             radius = tileSizePx * 0.08f,
             center = center,
             style = Stroke(width = 2.dp.toPx())
