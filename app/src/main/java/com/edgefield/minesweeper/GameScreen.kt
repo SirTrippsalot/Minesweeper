@@ -97,6 +97,58 @@ fun GameScreen(vm: GameViewModel) {
     }
 }
 
+private fun computeDirectionOffsets(
+    board: Array<Array<Tile>>,
+    tiling: Tiling,
+    tileToFace: Map<Tile, Face>,
+    faceToTile: Map<Face, Tile>,
+    kind: GridKind
+): List<Pair<Int, Int>> {
+    val expected = kind.neighborCount
+    board.flatten().forEach { tile ->
+        val face = tileToFace[tile] ?: return@forEach
+        val neighbors = tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+        if (neighbors.size == expected) {
+            return neighbors.map { it.x - tile.x to it.y - tile.y }
+        }
+    }
+    val first = board[0][0]
+    val face = tileToFace[first] ?: return emptyList()
+    return tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+        .map { it.x - first.x to it.y - first.y }
+}
+
+private fun computeRenderOffsets(
+    board: Array<Array<Tile>>,
+    renderer: TilingRenderer,
+    tileToFace: Map<Tile, Face>,
+    offsets: List<Pair<Int, Int>>
+): Map<Pair<Int, Int>, Offset> {
+    val out = mutableMapOf<Pair<Int, Int>, Offset>()
+    offsets.forEach { delta ->
+        val (dx, dy) = delta
+        var found: Offset? = null
+        outer@ for (y in board.indices) {
+            for (x in board[y].indices) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in board[y].indices && ny in board.indices) {
+                    val a = board[y][x]
+                    val b = board[ny][nx]
+                    val fa = tileToFace[a] ?: continue
+                    val fb = tileToFace[b] ?: continue
+                    val ca = renderer.faceCentroid(fa)
+                    val cb = renderer.faceCentroid(fb)
+                    found = Offset(cb.x - ca.x, cb.y - ca.y)
+                    break@outer
+                }
+            }
+        }
+        out[delta] = found ?: Offset.Zero
+    }
+    return out
+}
+
 @Composable
 private fun GameStatsRow(vm: GameViewModel) {
     Row(
@@ -160,6 +212,14 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     // Map tiles to faces (same order as GameEngine)
     val (tileToFace, faceToTile) = remember(tiling, vm.board) {
         mapTilesToFaces(vm.board.flatten(), tiling.faces)
+    }
+
+    // Offsets for neighbour directions and their screen translations
+    val directionOffsets = remember(tiling, vm.board) {
+        computeDirectionOffsets(vm.board, tiling, tileToFace, faceToTile, config.gridType.kind)
+    }
+    val renderOffsets = remember(renderer, directionOffsets) {
+        computeRenderOffsets(vm.board, renderer, tileToFace, directionOffsets)
     }
     
     var scale by remember { mutableStateOf(1f) }
@@ -227,32 +287,59 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     )
                 }
         ) {
+            fun drawFace(tile: Tile, face: Face, offset: Offset = Offset.Zero) {
+                val color = getTileColor(tile, vm.gameState)
+
+                val path = Path()
+                var e = face.any
+                var first = true
+                do {
+                    val pt = renderer.modelToOffset(e.origin)
+                    val shifted = Offset(pt.x + offset.x, pt.y + offset.y)
+                    if (first) {
+                        path.moveTo(shifted.x, shifted.y)
+                        first = false
+                    } else {
+                        path.lineTo(shifted.x, shifted.y)
+                    }
+                    e = e.next
+                } while (e !== face.any)
+                path.close()
+
+                drawPath(path, color)
+                drawPath(path, Color.Black, style = Stroke(width = 1.dp.toPx()))
+
+                val center = renderer.faceCentroid(face)
+                drawTileOverlays(tile, center + offset, renderer.size, vm.gameState)
+            }
+
             // Draw each tile using GridSystem geometry
             vm.board.flatten().forEach { tile ->
                 val face = tileToFace[tile]
                 if (face != null) {
-                    val color = getTileColor(tile, vm.gameState)
+                    drawFace(tile, face)
+                }
+            }
 
-                    val path = androidx.compose.ui.graphics.Path()
-                    var e = face.any
-                    var first = true
-                    do {
-                        val pt = renderer.modelToOffset(e.origin)
-                        if (first) {
-                            path.moveTo(pt.x, pt.y)
-                            first = false
-                        } else {
-                            path.lineTo(pt.x, pt.y)
+            if (config.edgeMode) {
+                vm.board.flatten().forEach { base ->
+                    val baseFace = tileToFace[base] ?: return@forEach
+                    val baseCenter = renderer.faceCentroid(baseFace)
+                    directionOffsets.forEach { delta ->
+                        val nx = base.x + delta.first
+                        val ny = base.y + delta.second
+                        if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
+                            val wx = ((nx % config.cols) + config.cols) % config.cols
+                            val wy = ((ny % config.rows) + config.rows) % config.rows
+                            val wrappedTile = vm.board[wy][wx]
+                            val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
+                            val step = renderOffsets[delta] ?: Offset.Zero
+                            val wrappedCenter = renderer.faceCentroid(wrappedFace)
+                            val offset = Offset(baseCenter.x + step.x - wrappedCenter.x,
+                                baseCenter.y + step.y - wrappedCenter.y)
+                            drawFace(wrappedTile, wrappedFace, offset)
                         }
-                        e = e.next
-                    } while (e !== face.any)
-                    path.close()
-
-                    drawPath(path, color)
-                    drawPath(path, Color.Black, style = Stroke(width = 1.dp.toPx()))
-
-                    val center = renderer.faceCentroid(face)
-                    drawTileOverlays(tile, center, renderer.size, vm.gameState)
+                    }
                 }
             }
 
@@ -276,12 +363,10 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         }
         
         // Overlay text numbers on top
-        vm.board.flatten().forEach { tile ->
+        fun drawNumber(tile: Tile, face: Face, offset: Offset = Offset.Zero) {
             if (tile.revealed && !tile.hasMine && tile.adjMines > 0) {
-                val face = tileToFace[tile]
-                if (face != null) {
-                    val center = renderer.faceCentroid(face)
-                    
+                val center = renderer.faceCentroid(face) + offset
+
                     Text(
                         text = tile.adjMines.toString(),
                         color = when (tile.adjMines) {
@@ -305,6 +390,34 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             .size(tileSize)
                             .wrapContentSize(Alignment.Center)
                     )
+            }
+        }
+
+        vm.board.flatten().forEach { tile ->
+            val face = tileToFace[tile]
+            if (face != null) {
+                drawNumber(tile, face)
+            }
+        }
+
+        if (config.edgeMode) {
+            vm.board.flatten().forEach { base ->
+                val baseFace = tileToFace[base] ?: return@forEach
+                val baseCenter = renderer.faceCentroid(baseFace)
+                directionOffsets.forEach { delta ->
+                    val nx = base.x + delta.first
+                    val ny = base.y + delta.second
+                    if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
+                        val wx = ((nx % config.cols) + config.cols) % config.cols
+                        val wy = ((ny % config.rows) + config.rows) % config.rows
+                        val wrappedTile = vm.board[wy][wx]
+                        val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
+                        val step = renderOffsets[delta] ?: Offset.Zero
+                        val wrappedCenter = renderer.faceCentroid(wrappedFace)
+                        val offset = Offset(baseCenter.x + step.x - wrappedCenter.x,
+                            baseCenter.y + step.y - wrappedCenter.y)
+                        drawNumber(wrappedTile, wrappedFace, offset)
+                    }
                 }
             }
         }
