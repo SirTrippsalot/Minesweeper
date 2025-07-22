@@ -195,22 +195,6 @@ class GameEngine(private val config: GameConfig) {
             faceToTile[neighborFace]
         }.toMutableList()
 
-        val kind = config.gridType.kind
-        if (kind == GridKind.SQUARE && kind.neighborCount > adjacent.size) {
-            // Add diagonal neighbours that aren't represented in the topology
-            val diagOffsets = listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)
-            diagOffsets.forEach { (dx, dy) ->
-                val nx = tile.x + dx
-                val ny = tile.y + dy
-                if (nx in 0 until config.cols && ny in 0 until config.rows) {
-                    val diagTile = board[ny][nx]
-                    if (diagTile !in adjacent) {
-                        adjacent += diagTile
-                    }
-                }
-            }
-        }
-
         return adjacent
     }
 }

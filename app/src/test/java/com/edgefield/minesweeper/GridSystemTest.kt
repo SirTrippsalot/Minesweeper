@@ -29,20 +29,13 @@ class GridSystemTest {
         assertTrue(neighbors.isNotEmpty(), "First square face should have neighbors")
     }
 
-    private fun invokeNeighbors(engine: GameEngine, tile: Tile): List<Tile> {
-        val m = GameEngine::class.java.getDeclaredMethod("neighbors", Tile::class.java)
-        m.isAccessible = true
-        @Suppress("UNCHECKED_CAST")
-        return m.invoke(engine, tile) as List<Tile>
-    }
-
     @Test
     fun neighborCountAcrossGrids() {
-        listOf(GridType.SQUARE, GridType.HEXAGON, GridType.TRIANGLE).forEach { type ->
-            val engine = GameEngine(GameConfig(rows = 3, cols = 3, mineCount = 0, gridType = type))
-            val center = engine.board[1][1]
-            val count = invokeNeighbors(engine, center).size
-            assertEquals(type.kind.neighborCount, count, "${type.name} neighbor count")
+        listOf(GridKind.SQUARE, GridKind.HEXAGON, GridKind.TRIANGLE).forEach { kind ->
+            val tiling = GridFactory.build(kind, 3, 3)
+            val centerFace = tiling.faces[4]
+            val count = tiling.neighbours(centerFace).size
+            assertEquals(kind.neighborCount, count, "${kind.name} neighbor count")
         }
     }
 }
