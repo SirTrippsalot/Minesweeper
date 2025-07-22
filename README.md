@@ -32,6 +32,7 @@ You can also open the project in Android Studio and run it directly from the IDE
 - Gesture-based controls with zoom and pan support.
 - Settings are saved between sessions.
 - Flags appear as darker water and return to gray when removed.
+- Revealed tiles show water or sand textures.
 
 ### Selecting a Grid Type
 

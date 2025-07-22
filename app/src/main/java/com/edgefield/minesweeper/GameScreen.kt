@@ -363,13 +363,20 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 val center = renderer.faceCentroid(face) + offset
                 if (!tile.revealed) {
                     val brush = Brush.radialGradient(
-                        colors = listOf(Color(0x80FFFFFF).ghostly(ghost), color),
+                        colors = listOf(Color(0x80CCCCCC).ghostly(ghost), color),
                         center = center,
                         radius = renderer.size
                     )
                     drawPath(path = path, brush = brush)
                 } else {
                     drawPath(path, color)
+                    if (!tile.hasMine) {
+                        if (tile.adjMines == 0) {
+                            drawSandEffect(path, ghost)
+                        } else {
+                            drawWaterEffect(path, ghost)
+                        }
+                    }
                 }
                 drawPath(
                     path,
@@ -610,6 +617,38 @@ private fun DrawScope.drawTileOverlays(
             center = center,
             style = Stroke(width = 2.dp.toPx())
         )
+    }
+}
+
+private fun DrawScope.drawWaterEffect(path: Path, ghost: Boolean) {
+    val bounds = path.getBounds()
+    val step = bounds.height / 4f
+    val color = Color(0xFF2196F3).copy(alpha = 0.3f).ghostly(ghost)
+    clipPath(path) {
+        for (i in 1 until 4) {
+            val y = bounds.top + i * step
+            drawLine(
+                color = color,
+                start = Offset(bounds.left, y),
+                end = Offset(bounds.right, y),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawSandEffect(path: Path, ghost: Boolean) {
+    val bounds = path.getBounds()
+    val step = bounds.width / 5f
+    val color = Color(0xFFBCAAA4).copy(alpha = 0.5f).ghostly(ghost)
+    clipPath(path) {
+        for (x in 0 until 5) {
+            for (y in 0 until 5) {
+                val cx = bounds.left + (x + 0.5f) * step
+                val cy = bounds.top + (y + 0.5f) * step
+                drawCircle(color, radius = step / 10f, center = Offset(cx, cy))
+            }
+        }
     }
 }
 
