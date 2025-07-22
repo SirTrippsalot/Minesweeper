@@ -47,20 +47,37 @@ fun GameScreen(vm: GameViewModel) {
             .fillMaxSize()
             .padding(8.dp)
     ) {
-        // Header with title and controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // Top menu with stats and controls
+        Surface(
+            color = Color(0xFFFFF9C4),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                "Minesweeper Edgelord",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Row {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    "Mines: ${'$'}{vm.getRemainingMines()}/${'$'}{vm.gameConfig.mineCount}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(" > ")
+                Text(
+                    "Time: ${'$'}{vm.getElapsedTimeFormatted()}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(" > ")
+                Text(
+                    "Moves: ${'$'}{vm.stats.totalMoves}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = { showSettings = true }) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    Icon(Icons.Default.Settings, contentDescription = "Options")
                 }
                 IconButton(onClick = vm::reset) {
                     Icon(Icons.Default.Refresh, contentDescription = "Restart")
@@ -73,24 +90,37 @@ fun GameScreen(vm: GameViewModel) {
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
-        // Game stats row
-        GameStatsRow(vm)
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Game board
-        GameBoard(vm, tileSize)
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Game controls
-        GameControls(vm)
-        
-        // Game status
-        GameStatus(vm.gameState)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            GameBoard(vm, tileSize)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Bottom controls area
+        Surface(
+            color = Color(0xFFFFF9C4),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                GameControls(vm)
+                GameStatus(vm.gameState)
+            }
+        }
     }
     
     if (showSettings) {
@@ -197,43 +227,6 @@ private fun triangleStep(delta: Pair<Int, Int>, up: Boolean, size: Float): Offse
 
 private fun squareStep(delta: Pair<Int, Int>, size: Float): Offset =
     Offset(delta.first * size, delta.second * size)
-
-@Composable
-private fun GameStatsRow(vm: GameViewModel) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        StatCard("Mines", "${vm.getRemainingMines()}/${vm.gameConfig.mineCount}")
-        StatCard("Time", vm.getElapsedTimeFormatted())
-        StatCard("Moves", vm.stats.totalMoves.toString())
-        StatCard("Efficiency", "${vm.stats.efficiency.toInt()}%")
-    }
-}
-
-@Composable
-private fun StatCard(label: String, value: String) {
-    Card(
-        modifier = Modifier.padding(4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
 @Composable
 private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) {
