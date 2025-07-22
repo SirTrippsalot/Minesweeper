@@ -55,6 +55,13 @@ class Tiling internal constructor(
     internal val faces   : MutableList<Face>,
     private  val vTable  : MutableMap<VKey,Vertex>
 ) {
+    private val extras = mutableMapOf<Face, MutableSet<Face>>()
+
+    internal fun addAdjacency(a: Face, b: Face) {
+        extras.getOrPut(a) { mutableSetOf() }.add(b)
+        extras.getOrPut(b) { mutableSetOf() }.add(a)
+    }
+
     /** Returns the other cells that share an edge with f in O(#edges). */
     fun neighbours(f: Face): List<Face> {
         val out = mutableListOf<Face>()
@@ -71,6 +78,7 @@ class Tiling internal constructor(
             }
             e = e.next
         } while(e !== f.any)
+        extras[f]?.let { out.addAll(it) }
         return out
     }
 
@@ -303,8 +311,28 @@ private val PENROSE_DEFINITION = PolygonDefinition(
 //──────────────────────────────────────────────────────────────────────────────
 
 /** Square grid (classic). neighbourMode = 4 or 8 directions (logic‑side). */
-class SquareGridBuilder(cols: Int, rows: Int) :
-    GenericGridBuilder(SQUARE_DEFINITION, cols, rows)
+class SquareGridBuilder(private val cols: Int, private val rows: Int) :
+    GenericGridBuilder(SQUARE_DEFINITION, cols, rows) {
+    override fun build(): Tiling {
+        val t = super.build()
+        for (r in 0 until rows) {
+            for (c in 0 until cols) {
+                val idx = r * cols + c
+                val face = t.faces[idx]
+                val offs = listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)
+                offs.forEach { (dx, dy) ->
+                    val nx = c + dx
+                    val ny = r + dy
+                    if (nx in 0 until cols && ny in 0 until rows) {
+                        val neighbor = t.faces[ny * cols + nx]
+                        t.addAdjacency(face, neighbor)
+                    }
+                }
+            }
+        }
+        return t
+    }
+}
 /*
 * Regular hex grid using axial q,r indices. Creates a parallelogram [w×h]. */
 class HexGridBuilder(w: Int, h: Int) :
