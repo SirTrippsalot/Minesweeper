@@ -28,6 +28,8 @@ class GameEngine(private val config: GameConfig) {
         private set
     
     val stats = GameStats()
+
+    private lateinit var directionOffsets: List<Pair<Int, Int>>
     
     init {
         Log.d("GameEngine", "Initializing GameEngine with config: rows=${config.rows}, cols=${config.cols}, mines=${config.mineCount}, gridType=${config.gridType}")
@@ -38,6 +40,7 @@ class GameEngine(private val config: GameConfig) {
             
             Log.d("GameEngine", "Initializing tile-to-face mapping...")
             initializeTileToFaceMapping()
+            directionOffsets = computeDirectionOffsets()
             Log.d("GameEngine", "Tile-to-face mapping complete")
             
             Log.d("GameEngine", "Seeding mines and numbers...")
@@ -73,6 +76,25 @@ class GameEngine(private val config: GameConfig) {
             }
         }
         recalculateAdjacents()
+    }
+
+    private fun computeDirectionOffsets(): List<Pair<Int, Int>> {
+        val expected = config.gridType.kind.neighborCount
+        board.flatten().forEach { tile ->
+            val face = tileToFace[tile] ?: return@forEach
+            val neighbors = tiling.neighbours(face).mapNotNull { nf ->
+                faceToTile[nf]
+            }
+            if (neighbors.size == expected) {
+                return neighbors.map { it.x - tile.x to it.y - tile.y }
+            }
+        }
+        // Fallback to whatever offsets we find for the first tile
+        val first = board[0][0]
+        val face = tileToFace[first] ?: return emptyList()
+        return tiling.neighbours(face).mapNotNull { nf ->
+            faceToTile[nf]
+        }.map { it.x - first.x to it.y - first.y }
     }
 
     private var firstClick = true
@@ -201,7 +223,22 @@ class GameEngine(private val config: GameConfig) {
         val adjacent = tiling.neighbours(face).mapNotNull { neighborFace ->
             faceToTile[neighborFace]
         }.toMutableList()
-
+        if (config.edgeMode && ::directionOffsets.isInitialized) {
+            val seen = adjacent.toMutableSet()
+            directionOffsets.forEach { (dx, dy) ->
+                val (nx, ny) = wrapCoord(tile.x + dx, tile.y + dy)
+                val neighbor = board[ny][nx]
+                if (neighbor !== tile && seen.add(neighbor)) {
+                    adjacent += neighbor
+                }
+            }
+        }
         return adjacent
+    }
+
+    private fun wrapCoord(x: Int, y: Int): Pair<Int, Int> {
+        val wx = ((x % config.cols) + config.cols) % config.cols
+        val wy = ((y % config.rows) + config.rows) % config.rows
+        return wx to wy
     }
 }
