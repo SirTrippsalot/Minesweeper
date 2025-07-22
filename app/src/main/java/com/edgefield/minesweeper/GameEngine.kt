@@ -195,7 +195,8 @@ class GameEngine(private val config: GameConfig) {
             faceToTile[neighborFace]
         }.toMutableList()
 
-        if (config.gridType == GridType.SQUARE) {
+        val kind = config.gridType.kind
+        if (kind == GridKind.SQUARE && kind.neighborCount > adjacent.size) {
             // Add diagonal neighbours that aren't represented in the topology
             val diagOffsets = listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)
             diagOffsets.forEach { (dx, dy) ->
