@@ -397,9 +397,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         var nx = base.x + delta.first
                         var ny = base.y + delta.second
                         if (config.gridType.kind == GridKind.TRIANGLE && config.rows % 2 == 1) {
-                            val up = (base.x + base.y) % 2 == 0
-                            if (ny < 0 && !up && delta.second == -1) nx -= 1
-                            else if (ny >= config.rows && up && delta.second == 1) nx += 1
+                            if (ny < 0 && delta.second == -1) nx -= 1
+                            else if (ny >= config.rows && delta.second == 1) nx += 1
                         }
                         if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
                             val wx = ((nx % config.cols) + config.cols) % config.cols
@@ -505,9 +504,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     var nx = base.x + delta.first
                     var ny = base.y + delta.second
                     if (config.gridType.kind == GridKind.TRIANGLE && config.rows % 2 == 1) {
-                        val up = (base.x + base.y) % 2 == 0
-                        if (ny < 0 && !up && delta.second == -1) nx -= 1
-                        else if (ny >= config.rows && up && delta.second == 1) nx += 1
+                        if (ny < 0 && delta.second == -1) nx -= 1
+                        else if (ny >= config.rows && delta.second == 1) nx += 1
                     }
                     if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
                         val wx = ((nx % config.cols) + config.cols) % config.cols
