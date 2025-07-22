@@ -307,4 +307,43 @@ class GameEngine(private val config: GameConfig) {
         val wy = ((y % config.rows) + config.rows) % config.rows
         return wx to wy
     }
+
+    fun exportState(): EngineState {
+        val boardCopy = Array(board.size) { r ->
+            Array(board[r].size) { c ->
+                val t = board[r][c]
+                Tile(t.x, t.y, t.hasMine, t.revealed, t.mark, t.adjMines)
+            }
+        }
+        return EngineState(
+            board = boardCopy,
+            gameState = gameState,
+            firstClick = firstClick,
+            stats = stats.copy()
+        )
+    }
+
+    fun loadState(state: EngineState) {
+        require(state.board.size == config.rows &&
+            state.board[0].size == config.cols) {
+            "Board size mismatch"
+        }
+        for (y in board.indices) {
+            for (x in board[y].indices) {
+                val src = state.board[y][x]
+                val dst = board[y][x]
+                dst.hasMine = src.hasMine
+                dst.revealed = src.revealed
+                dst.mark = src.mark
+                dst.adjMines = src.adjMines
+            }
+        }
+        firstClick = state.firstClick
+        gameState = state.gameState
+        stats.startTime = state.stats.startTime
+        stats.endTime = state.stats.endTime
+        stats.processCount = state.stats.processCount
+        stats.totalMoves = state.stats.totalMoves
+        stats.minesFound = state.stats.minesFound
+    }
 }
