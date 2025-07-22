@@ -3,11 +3,21 @@ package com.edgefield.minesweeper
 
 import android.util.Log
 import kotlin.random.Random
+import kotlin.math.sqrt
 
 // Mapping helper
 import com.edgefield.minesweeper.mapTilesToFaces
 
 class GameEngine(private val config: GameConfig) {
+
+    private val squareOffsets = listOf(
+        -1 to 0, 1 to 0, 0 to -1, 0 to 1,
+        -1 to -1, -1 to 1, 1 to -1, 1 to 1
+    )
+
+    private val triangleOffsets = listOf(
+        -1 to 0, 1 to 0, 0 to 1, 0 to -1
+    )
     
     val board: Array<Array<Tile>> = Array(config.rows) { r ->
         Array(config.cols) { c -> Tile(c, r) }
@@ -89,12 +99,17 @@ class GameEngine(private val config: GameConfig) {
                 return neighbors.map { it.x - tile.x to it.y - tile.y }
             }
         }
-        // Fallback to whatever offsets we find for the first tile
-        val first = board[0][0]
-        val face = tileToFace[first] ?: return emptyList()
-        return tiling.neighbours(face).mapNotNull { nf ->
-            faceToTile[nf]
-        }.map { it.x - first.x to it.y - first.y }
+        // Fallback to generic offsets based on grid type
+        return when (config.gridType.kind) {
+            GridKind.SQUARE -> squareOffsets
+            GridKind.TRIANGLE -> triangleOffsets
+            else -> {
+                val first = board[0][0]
+                val face = tileToFace[first] ?: return emptyList()
+                tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+                    .map { it.x - first.x to it.y - first.y }
+            }
+        }
     }
 
     private var firstClick = true
@@ -225,7 +240,18 @@ class GameEngine(private val config: GameConfig) {
         }.toMutableList()
         if (config.edgeMode && ::directionOffsets.isInitialized) {
             val seen = adjacent.toMutableSet()
-            directionOffsets.forEach { (dx, dy) ->
+            val offsets = when (config.gridType.kind) {
+                GridKind.TRIANGLE -> {
+                    if ((tile.x + tile.y) % 2 == 0) {
+                        listOf(-1 to 0, 1 to 0, 0 to 1)
+                    } else {
+                        listOf(-1 to 0, 1 to 0, 0 to -1)
+                    }
+                }
+                GridKind.SQUARE -> squareOffsets
+                else -> directionOffsets
+            }
+            offsets.forEach { (dx, dy) ->
                 val (nx, ny) = wrapCoord(tile.x + dx, tile.y + dy)
                 val neighbor = board[ny][nx]
                 if (neighbor !== tile && seen.add(neighbor)) {
