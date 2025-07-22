@@ -10,6 +10,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
+fun ConfigNumberField(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value.toString(),
+        onValueChange = { it.toIntOrNull()?.let(onValueChange) },
+        label = { Text(label) },
+        modifier = modifier
+    )
+}
+
+@Composable
 fun GridTypeSelector(
     selectedType: GridType,
     onTypeSelected: (GridType) -> Unit,
