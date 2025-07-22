@@ -9,6 +9,9 @@ enum class GridType {
     SQUARE, TRIANGLE, HEXAGON, OCTASQUARE, CAIRO, RHOMBILLE, SNUB_SQUARE, PENROSE
 }
 
+val GridType.kind: GridKind
+    get() = GridKind.valueOf(name)
+
 enum class TouchAction {
     REVEAL, FLAG, QUESTION, MARK_CYCLE, NONE
 }

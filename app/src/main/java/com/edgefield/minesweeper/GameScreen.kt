@@ -141,16 +141,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     // Create tiling using GridSystem
     val tiling = remember(config.gridType, config.cols, config.rows) {
         GridFactory.build(
-            kind = when (config.gridType) {
-                GridType.SQUARE -> GridKind.SQUARE
-                GridType.TRIANGLE -> GridKind.TRIANGLE
-                GridType.HEXAGON -> GridKind.HEXAGON
-                GridType.OCTASQUARE -> GridKind.OCTASQUARE
-                GridType.CAIRO -> GridKind.CAIRO
-                GridType.RHOMBILLE -> GridKind.RHOMBILLE
-                GridType.SNUB_SQUARE -> GridKind.SNUB_SQUARE
-                GridType.PENROSE -> GridKind.PENROSE
-            },
+            kind = config.gridType.kind,
             w = config.cols,
             h = config.rows
         )
