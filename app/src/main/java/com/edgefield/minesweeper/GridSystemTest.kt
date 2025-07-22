@@ -21,3 +21,27 @@ fun testGridSystemIntegration() {
         println("First square face has ${neighbors.size} neighbors")
     }
 }
+
+// Verify neighbour counts via GameEngine
+fun testNeighborCounts() {
+    val types = listOf(GridType.SQUARE, GridType.TRIANGLE, GridType.HEXAGON)
+    types.forEach { type ->
+        val config = GameConfig(rows = 3, cols = 3, mineCount = 0, gridType = type)
+        val engine = GameEngine(config)
+        val tile = engine.board[1][1]
+        val method = GameEngine::class.java.getDeclaredMethod("neighbors", Tile::class.java).apply {
+            isAccessible = true
+        }
+        val neighbors = method.invoke(engine, tile) as List<*>
+        val expected = when (type) {
+            GridType.SQUARE -> GridKind.SQUARE.neighborCount
+            GridType.TRIANGLE -> GridKind.TRIANGLE.neighborCount
+            GridType.HEXAGON -> GridKind.HEXAGON.neighborCount
+            else -> 0
+        }
+        println("${type.name} center has ${neighbors.size} neighbors")
+        check(neighbors.size == expected) {
+            "${type.name} expected $expected neighbors, got ${neighbors.size}"
+        }
+    }
+}

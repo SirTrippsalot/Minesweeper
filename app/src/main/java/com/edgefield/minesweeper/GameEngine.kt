@@ -11,17 +11,19 @@ class GameEngine(private val config: GameConfig) {
     }
     
     // Grid topology using GridSystem
+    private val gridKind = when (config.gridType) {
+        GridType.SQUARE -> GridKind.SQUARE
+        GridType.TRIANGLE -> GridKind.TRIANGLE
+        GridType.HEXAGON -> GridKind.HEXAGON
+        GridType.OCTASQUARE -> GridKind.OCTASQUARE
+        GridType.CAIRO -> GridKind.CAIRO
+        GridType.RHOMBILLE -> GridKind.RHOMBILLE
+        GridType.SNUB_SQUARE -> GridKind.SNUB_SQUARE
+        GridType.PENROSE -> GridKind.PENROSE
+    }
+
     private val tiling = GridFactory.build(
-        kind = when (config.gridType) {
-            GridType.SQUARE -> GridKind.SQUARE
-            GridType.TRIANGLE -> GridKind.TRIANGLE
-            GridType.HEXAGON -> GridKind.HEXAGON
-            GridType.OCTASQUARE -> GridKind.OCTASQUARE
-            GridType.CAIRO -> GridKind.CAIRO
-            GridType.RHOMBILLE -> GridKind.RHOMBILLE
-            GridType.SNUB_SQUARE -> GridKind.SNUB_SQUARE
-            GridType.PENROSE -> GridKind.PENROSE
-        },
+        kind = gridKind,
         w = config.cols,
         h = config.rows
     )
@@ -204,7 +206,7 @@ class GameEngine(private val config: GameConfig) {
             faceToTile[neighborFace]
         }.toMutableList()
 
-        if (config.gridType == GridType.SQUARE) {
+        if (gridKind == GridKind.SQUARE && gridKind.neighborCount > adjacent.size) {
             // Add diagonal neighbours that aren't represented in the topology
             val diagOffsets = listOf(-1 to -1, -1 to 1, 1 to -1, 1 to 1)
             diagOffsets.forEach { (dx, dy) ->
