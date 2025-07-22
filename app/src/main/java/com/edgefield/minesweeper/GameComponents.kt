@@ -76,27 +76,39 @@ fun DifficultySelector(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
+        var expanded by remember { mutableStateOf(false) }
+
         Text("Difficulty", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        Difficulty.values().forEach { diff ->
-            val name = diff.name.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectable(
-                        selected = selected == diff,
-                        onClick = { onSelected(diff) }
-                    )
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+        val currentName = selected.name
+            .replace('_', ' ')
+            .lowercase()
+            .replaceFirstChar { it.titlecase() }
+
+        Box {
+            OutlinedButton(onClick = { expanded = true }) {
+                Text(currentName)
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
             ) {
-                RadioButton(
-                    selected = selected == diff,
-                    onClick = { onSelected(diff) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(name)
+                Difficulty.values().forEach { diff ->
+                    val name = diff.name
+                        .replace('_', ' ')
+                        .lowercase()
+                        .replaceFirstChar { it.titlecase() }
+
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            onSelected(diff)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
