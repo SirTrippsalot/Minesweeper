@@ -144,4 +144,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun saveState() {
+        PrefsManager.saveGameState(getApplication(), engine.exportState())
+    }
+
+    fun loadState() {
+        PrefsManager.loadGameState(getApplication(), gameConfig)?.let { state ->
+            engine = GameEngine(gameConfig)
+            engine.loadState(state)
+            updateState()
+        }
+    }
 }
