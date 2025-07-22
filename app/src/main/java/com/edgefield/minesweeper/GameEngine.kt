@@ -4,6 +4,9 @@ package com.edgefield.minesweeper
 import android.util.Log
 import kotlin.random.Random
 
+// Mapping helper
+import com.edgefield.minesweeper.mapTilesToFaces
+
 class GameEngine(private val config: GameConfig) {
     
     val board: Array<Array<Tile>> = Array(config.rows) { r ->
@@ -47,18 +50,14 @@ class GameEngine(private val config: GameConfig) {
     }
     
     private fun initializeTileToFaceMapping() {
-        // Create a deterministic mapping between board positions and faces
-        // Faces are generated in row-major order by the grid builders
-        val tiles = board.flatten()
-        
-        if (tiling.faces.size != tiles.size) {
-            throw IllegalStateException("Tiling face count (${tiling.faces.size}) doesn't match tile count (${tiles.size})")
-        }
-        
-        tiles.forEachIndexed { index, tile ->
-            val face = tiling.faces[index]
-            tileToFace[tile] = face
-            faceToTile[face] = tile
+        val (tToF, fToT) = mapTilesToFaces(board.flatten(), tiling.faces)
+        tileToFace.putAll(tToF)
+        faceToTile.putAll(fToT)
+    }
+
+    private fun recalculateAdjacents() {
+        board.flatten().forEach { tile ->
+            tile.adjMines = neighbors(tile).count { it.hasMine }
         }
     }
 
@@ -73,9 +72,7 @@ class GameEngine(private val config: GameConfig) {
                 placed++
             }
         }
-        board.flatten().forEach { tile ->
-            tile.adjMines = neighbors(tile).count { it.hasMine }
-        }
+        recalculateAdjacents()
     }
 
     private var firstClick = true
@@ -142,9 +139,7 @@ class GameEngine(private val config: GameConfig) {
             }
             
             // Recalculate adjacent mine counts
-            board.flatten().forEach { tile ->
-                tile.adjMines = neighbors(tile).count { it.hasMine }
-            }
+            recalculateAdjacents()
         }
     }
 

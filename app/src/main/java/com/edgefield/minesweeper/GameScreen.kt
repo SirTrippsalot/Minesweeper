@@ -156,17 +156,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     }
     
     // Map tiles to faces (same order as GameEngine)
-    val tileToFace = remember(tiling, vm.board) {
-        val map = mutableMapOf<Tile, Face>()
-        vm.board.flatten().forEachIndexed { index, tile ->
-            if (index < tiling.faces.size) {
-                map[tile] = tiling.faces[index]
-            }
-        }
-        map
-    }
-    val faceToTile = remember(tileToFace) {
-        tileToFace.entries.associate { (tile, face) -> face to tile }
+    val (tileToFace, faceToTile) = remember(tiling, vm.board) {
+        mapTilesToFaces(vm.board.flatten(), tiling.faces)
     }
     
     Box(
@@ -381,25 +372,17 @@ private fun SettingsDialog(
             Column {
                 Text("Grid Size")
                 Row {
-                    OutlinedTextField(
-                        value = tempConfig.rows.toString(),
-                        onValueChange = { 
-                            it.toIntOrNull()?.let { rows ->
-                                tempConfig = tempConfig.copy(rows = rows.coerceIn(5, 20))
-                            }
-                        },
-                        label = { Text("Rows") },
+                    ConfigNumberField(
+                        label = "Rows",
+                        value = tempConfig.rows,
+                        onValueChange = { tempConfig = tempConfig.copy(rows = it.coerceIn(5, 20)) },
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(
-                        value = tempConfig.cols.toString(),
-                        onValueChange = { 
-                            it.toIntOrNull()?.let { cols ->
-                                tempConfig = tempConfig.copy(cols = cols.coerceIn(5, 20))
-                            }
-                        },
-                        label = { Text("Cols") },
+                    ConfigNumberField(
+                        label = "Cols",
+                        value = tempConfig.cols,
+                        onValueChange = { tempConfig = tempConfig.copy(cols = it.coerceIn(5, 20)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -425,15 +408,13 @@ private fun SettingsDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedTextField(
-                        value = tempConfig.customMines.toString(),
-                        onValueChange = {
-                            it.toIntOrNull()?.let { value ->
-                                val max = tempConfig.rows * tempConfig.cols - 1
-                                tempConfig = tempConfig.copy(customMines = value.coerceIn(1, max))
-                            }
-                        },
-                        label = { Text(if (tempConfig.useMinePercent) "Mine %" else "Mine Count") }
+                    ConfigNumberField(
+                        label = if (tempConfig.useMinePercent) "Mine %" else "Mine Count",
+                        value = tempConfig.customMines,
+                        onValueChange = { value ->
+                            val max = tempConfig.rows * tempConfig.cols - 1
+                            tempConfig = tempConfig.copy(customMines = value.coerceIn(1, max))
+                        }
                     )
                 }
                 
