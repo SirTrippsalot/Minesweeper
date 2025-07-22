@@ -149,7 +149,6 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     val bounds = remember(tiling) { tiling.modelBounds() }
     val scaleMultiplier = when (config.gridType) {
         GridType.HEXAGON -> 2f / 3f
-        GridType.TRIANGLE -> 0.75f
         else -> 1f
     }
     val renderer = remember(tileSizePx, bounds, scaleMultiplier) {
