@@ -53,6 +53,39 @@ fun GridTypeSelector(
 }
 
 @Composable
+fun DifficultySelector(
+    selected: Difficulty,
+    onSelected: (Difficulty) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text("Difficulty", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Difficulty.values().forEach { diff ->
+            val name = diff.name.replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectable(
+                        selected = selected == diff,
+                        onClick = { onSelected(diff) }
+                    )
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = selected == diff,
+                    onClick = { onSelected(diff) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(name)
+            }
+        }
+    }
+}
+
+@Composable
 fun DifficultyPresets(
     onPresetSelected: (GameConfig) -> Unit,
     modifier: Modifier = Modifier
@@ -62,9 +95,13 @@ fun DifficultyPresets(
         Spacer(modifier = Modifier.height(8.dp))
         
         val presets = listOf(
-            "Beginner" to GameConfig(rows = 9, cols = 9, mineCount = 10),
-            "Intermediate" to GameConfig(rows = 16, cols = 16, mineCount = 40),
-            "Expert" to GameConfig(rows = 16, cols = 30, mineCount = 99)
+            "Very Easy" to GameConfig(difficulty = Difficulty.VERY_EASY),
+            "Easy" to GameConfig(difficulty = Difficulty.EASY),
+            "Medium" to GameConfig(difficulty = Difficulty.MEDIUM),
+            "Hard" to GameConfig(difficulty = Difficulty.HARD),
+            "Very Hard" to GameConfig(difficulty = Difficulty.VERY_HARD),
+            "Hardest" to GameConfig(difficulty = Difficulty.HARDEST),
+            "Custom" to GameConfig(difficulty = Difficulty.CUSTOM)
         )
         
         presets.forEach { (name, config) ->
