@@ -435,7 +435,8 @@ private fun getTileColor(tile: Tile, gameState: GameState): Color {
         !tile.revealed && tile.mark == Mark.QUESTION -> Color(0xFFFF9800) // Orange for questions
         !tile.revealed -> Color(0xFF9E9E9E) // Gray for unrevealed
         tile.hasMine && gameState == GameState.LOST -> Color(0xFFF44336) // Red for mines
-        tile.revealed -> Color(0xFFE0E0E0) // Light gray for revealed
+        tile.revealed && tile.adjMines == 0 -> Color(0xFFFFF9C4) // Sand for empty island
+        tile.revealed -> Color(0xFFB3E5FC) // Light blue for ocean
         else -> Color(0xFFE0E0E0) // Default fallback
     }
 }
