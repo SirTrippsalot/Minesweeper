@@ -46,4 +46,12 @@ class GridSystemTest {
             assertEquals(9, tiling.faces.size, "${kind.name} face count")
         }
     }
+
+    @Test
+    fun neighboursAreUnique() {
+        val tiling = GridFactory.build(GridKind.SQUARE, 3, 3)
+        val centerFace = tiling.faces[4]
+        val neighbors = tiling.neighbours(centerFace)
+        assertEquals(neighbors.toSet().size, neighbors.size, "Neighbors should be unique")
+    }
 }
