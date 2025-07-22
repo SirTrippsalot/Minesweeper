@@ -423,7 +423,9 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                                 baseCenter.x + step.x - wrappedCenter.x,
                                 baseCenter.y + step.y - wrappedCenter.y
                             )
-                            drawFace(wrappedTile, wrappedFace, offset, true)
+                            if (offset != Offset.Zero) {
+                                drawFace(wrappedTile, wrappedFace, offset, true)
+                            }
                         }
                     }
                 }
@@ -531,7 +533,9 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             baseCenter.x + step.x - wrappedCenter.x,
                             baseCenter.y + step.y - wrappedCenter.y
                         )
-                        drawNumber(wrappedTile, wrappedFace, offset, true)
+                        if (offset != Offset.Zero) {
+                            drawNumber(wrappedTile, wrappedFace, offset, true)
+                        }
                     }
                 }
             }
