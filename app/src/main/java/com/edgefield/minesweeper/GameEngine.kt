@@ -40,6 +40,8 @@ class GameEngine(private val config: GameConfig) {
     val stats = GameStats()
 
     private lateinit var directionOffsets: List<Pair<Int, Int>>
+    private lateinit var hexEvenOffsets: List<Pair<Int, Int>>
+    private lateinit var hexOddOffsets: List<Pair<Int, Int>>
     
     init {
         Log.d("GameEngine", "Initializing GameEngine with config: rows=${config.rows}, cols=${config.cols}, mines=${config.mineCount}, gridType=${config.gridType}")
@@ -50,7 +52,14 @@ class GameEngine(private val config: GameConfig) {
             
             Log.d("GameEngine", "Initializing tile-to-face mapping...")
             initializeTileToFaceMapping()
-            directionOffsets = computeDirectionOffsets()
+            if (config.gridType.kind == GridKind.HEXAGON) {
+                val (evenOffs, oddOffs) = computeHexParityOffsets()
+                hexEvenOffsets = evenOffs
+                hexOddOffsets = oddOffs
+                directionOffsets = evenOffs
+            } else {
+                directionOffsets = computeDirectionOffsets()
+            }
             Log.d("GameEngine", "Tile-to-face mapping complete")
             
             Log.d("GameEngine", "Seeding mines and numbers...")
@@ -110,6 +119,29 @@ class GameEngine(private val config: GameConfig) {
                     .map { it.x - first.x to it.y - first.y }
             }
         }
+    }
+
+    private fun computeHexParityOffsets(): Pair<List<Pair<Int, Int>>, List<Pair<Int, Int>>> {
+        val expected = GridKind.HEXAGON.neighborCount
+        var even: List<Pair<Int, Int>>? = null
+        var odd: List<Pair<Int, Int>>? = null
+        board.flatten().forEach { tile ->
+            val face = tileToFace[tile] ?: return@forEach
+            val neighbors = tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+            if (neighbors.size == expected) {
+                val offs = neighbors.map { it.x - tile.x to it.y - tile.y }
+                if (tile.x % 2 == 0 && even == null) even = offs
+                if (tile.x % 2 == 1 && odd == null) odd = offs
+                if (even != null && odd != null) return even!! to odd!!
+            }
+        }
+        val first = board[0][0]
+        val face = tileToFace[first] ?: return emptyList<Pair<Int, Int>>() to emptyList()
+        val fallback = tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+            .map { it.x - first.x to it.y - first.y }
+        if (even == null) even = fallback
+        if (odd == null) odd = fallback
+        return even!! to odd!!
     }
 
     private var firstClick = true
@@ -249,6 +281,7 @@ class GameEngine(private val config: GameConfig) {
                     }
                 }
                 GridKind.SQUARE -> squareOffsets
+                GridKind.HEXAGON -> if (tile.x % 2 == 0) hexEvenOffsets else hexOddOffsets
                 else -> directionOffsets
             }
             offsets.forEach { (dx, dy) ->
