@@ -31,11 +31,19 @@ class GridSystemTest {
 
     @Test
     fun neighborCountAcrossGrids() {
-        listOf(GridKind.SQUARE, GridKind.HEXAGON, GridKind.TRIANGLE).forEach { kind ->
+        GridKind.values().forEach { kind ->
             val tiling = GridFactory.build(kind, 3, 3)
             val centerFace = tiling.faces[4]
             val count = tiling.neighbours(centerFace).size
             assertEquals(kind.neighborCount, count, "${kind.name} neighbor count")
+        }
+    }
+
+    @Test
+    fun faceCountAcrossGrids() {
+        GridKind.values().forEach { kind ->
+            val tiling = GridFactory.build(kind, 3, 3)
+            assertEquals(9, tiling.faces.size, "${kind.name} face count")
         }
     }
 }
