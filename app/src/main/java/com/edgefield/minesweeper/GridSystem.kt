@@ -25,6 +25,7 @@ import kotlin.math.*
 //──────────────────────────────────────────────────────────────────────────────
 
 private const val SCALE = 1_000_000     // 1 model‑unit = 1e‑6 in our key space
+private val SQRT3 = sqrt(3.0)
 
 internal data class VKey(val x: Long, val y: Long)
 
@@ -95,6 +96,11 @@ class Tiling internal constructor(
     }
 }
 
+data class PolygonDefinition(
+    val vertices: List<Pair<Double, Double>>,
+    val placement: (col: Int, row: Int, base: Pair<Double, Double>, index: Int) -> Pair<Double, Double>
+)
+
 //──────────────────────────────────────────────────────────────────────────────
 //  3 ▍ Abstract builder base – takes care of twin wiring & bookkeeping
 //──────────────────────────────────────────────────────────────────────────────
@@ -156,57 +162,21 @@ abstract class GridBuilder {
     abstract fun build(): Tiling
 }
 
-//──────────────────────────────────────────────────────────────────────────────
-//  4 ▍ Concrete generators
-//──────────────────────────────────────────────────────────────────────────────
-
-/** Square grid (classic). neighbourMode = 4 or 8 directions (logic‑side). */
-class SquareGridBuilder(
+open class GenericGridBuilder(
+    private val definition: PolygonDefinition,
     private val cols: Int,
     private val rows: Int
 ) : GridBuilder() {
     override fun build(): Tiling {
-        // Each cell [i,j] with unit edge length 1
         for (j in 0 until rows) {
             for (i in 0 until cols) {
-                val v0 = tiling.getVertex(i.toDouble(), j.toDouble())
-                val v1 = tiling.getVertex(i+1.0, j.toDouble())
-                val v2 = tiling.getVertex(i+1.0, j+1.0)
-                val v3 = tiling.getVertex(i.toDouble(), j+1.0)
-
-                val e0 = he(v0); val e1 = he(v1); val e2 = he(v2); val e3 = he(v3)
-                connectTwin(v0,v1,e0); connectTwin(v1,v2,e1); connectTwin(v2,v3,e2); connectTwin(v3,v0,e3)
-                registerFace(arrayOf(e0,e1,e2,e3))
-            }
-        }
-        finalizeTwins()
-        return tiling
-    }
-}
-/*
-* Regular hex grid using axial q,r indices. Creates a parallelogram [w×h]. */
-class HexGridBuilder(
-    private val w: Int,
-    private val h: Int
-) : GridBuilder() {
-    private val SQRT3 = sqrt(3.0)
-
-    override fun build(): Tiling {
-        for (r in 0 until h) {
-            for (q in 0 until w) {
-                val cx = 1.5 * q
-                val cy = SQRT3 * r + (SQRT3/2) * (q % 2)
-
-                // 6 corners, 0° first → counter‑clockwise
-                // Use a global orientation so adjacent cells share vertices
-                val corners = (0 until 6).map { k ->
-                    val angle = Math.toRadians(60.0*k) // flat‑topped
-                    tiling.getVertex(cx + cos(angle), cy + sin(angle))
-                }.toTypedArray()
-
-                val edges = Array(6) { he(corners[it]) }
-                for (k in 0 until 6) {
-                    connectTwin(corners[k], corners[(k+1)%6], edges[k])
+                val verts = definition.vertices.mapIndexed { idx, base ->
+                    val coord = definition.placement(i, j, base, idx)
+                    tiling.getVertex(coord.first, coord.second)
+                }
+                val edges = Array(verts.size) { he(verts[it]) }
+                for (k in edges.indices) {
+                    connectTwin(verts[k], verts[(k + 1) % edges.size], edges[k])
                 }
                 registerFace(edges)
             }
@@ -216,52 +186,68 @@ class HexGridBuilder(
     }
 }
 
-/** Equilateral triangle grid – upright / inverted pattern. */
-class TriangleGridBuilder(
-    private val cols: Int,
-    private val rows: Int
-) : GridBuilder() {
-    private val SQRT3 = sqrt(3.0)
+private val SQUARE_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.0 to 0.0,
+        1.0 to 0.0,
+        1.0 to 1.0,
+        0.0 to 1.0
+    )
+) { c, r, v, _ ->
+    c + v.first to r + v.second
+}
 
-    override fun build(): Tiling {
-        // Precompute all vertex positions on the triangular lattice
-        // We allocate one extra column of vertices so that the final column
-        // calculations that access i + 1 + rowParity remain safe on odd rows.
-        val vertexGrid = Array(rows + 1) { j ->
-            Array(cols + 2) { i ->
-                val x = i + 0.5 * (j % 2)
-                val y = j * SQRT3 / 2
-                tiling.getVertex(x, y)
-            }
+private val HEX_DEFINITION = PolygonDefinition(
+    vertices = (0 until 6).map { k ->
+        val angle = Math.toRadians(60.0 * k)
+        cos(angle) to sin(angle)
+    }
+) { q, r, v, _ ->
+    val cx = 1.5 * q
+    val cy = SQRT3 * r + (SQRT3 / 2) * (q % 2)
+    cx + v.first to cy + v.second
+}
+
+private val TRIANGLE_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.0 to 0.0,
+        1.0 to 0.0,
+        0.5 to SQRT3 / 2
+    )
+) { c, r, _, idx ->
+    val p = r % 2
+    val q = 1 - p
+    val up = (c + r) % 2 == 0
+    if (up) {
+        when (idx) {
+            0 -> c + 1.5 * p to r * SQRT3 / 2
+            1 -> c + 1 + 1.5 * p to r * SQRT3 / 2
+            else -> c + 1.5 * q to (r + 1) * SQRT3 / 2
         }
-
-        for (j in 0 until rows) {
-            val rowParity = j % 2
-            for (i in 0 until cols) {
-                val up = (i + j) % 2 == 0
-                if (up) {
-                    val v0 = vertexGrid[j][i + rowParity]
-                    val v1 = vertexGrid[j][i + 1 + rowParity]
-                    val v2 = vertexGrid[j + 1][i + ((j + 1) % 2)]
-
-                    val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
-                    connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
-                    registerFace(arrayOf(e0, e1, e2))
-                } else {
-                    val v0 = vertexGrid[j + 1][i + ((j + 1) % 2)]
-                    val v1 = vertexGrid[j][i + 1 + rowParity]
-                    val v2 = vertexGrid[j + 1][i + 1 + ((j + 1) % 2)]
-
-                    val e0 = he(v0); val e1 = he(v1); val e2 = he(v2)
-                    connectTwin(v0, v1, e0); connectTwin(v1, v2, e1); connectTwin(v2, v0, e2)
-                    registerFace(arrayOf(e0, e1, e2))
-                }
-            }
+    } else {
+        when (idx) {
+            0 -> c + 1.5 * q to (r + 1) * SQRT3 / 2
+            1 -> c + 1 + 1.5 * p to r * SQRT3 / 2
+            else -> c + 1 + 1.5 * q to (r + 1) * SQRT3 / 2
         }
-        finalizeTwins()
-        return tiling
     }
 }
+
+//──────────────────────────────────────────────────────────────────────────────
+//  4 ▍ Concrete generators
+//──────────────────────────────────────────────────────────────────────────────
+
+/** Square grid (classic). neighbourMode = 4 or 8 directions (logic‑side). */
+class SquareGridBuilder(cols: Int, rows: Int) :
+    GenericGridBuilder(SQUARE_DEFINITION, cols, rows)
+/*
+* Regular hex grid using axial q,r indices. Creates a parallelogram [w×h]. */
+class HexGridBuilder(w: Int, h: Int) :
+    GenericGridBuilder(HEX_DEFINITION, w, h)
+
+/** Equilateral triangle grid – upright / inverted pattern. */
+class TriangleGridBuilder(cols: Int, rows: Int) :
+    GenericGridBuilder(TRIANGLE_DEFINITION, cols, rows)
 
 //──────────────────────────────────────────────────────────────────────────────
 //  5 ▍ Place‑holders for the more exotic tilings (Octasquare, Cairo, etc.)
@@ -353,9 +339,9 @@ enum class GridKind { SQUARE, TRIANGLE, HEXAGON, OCTASQUARE, CAIRO, RHOMBILLE, S
 
 object GridFactory {
     fun build(kind: GridKind, w:Int, h:Int = w): Tiling = when(kind) {
-        GridKind.SQUARE      -> SquareGridBuilder(w,h).build()
-        GridKind.TRIANGLE    -> TriangleGridBuilder(w,h).build()
-        GridKind.HEXAGON     -> HexGridBuilder(w,h).build()
+        GridKind.SQUARE      -> GenericGridBuilder(SQUARE_DEFINITION, w, h).build()
+        GridKind.TRIANGLE    -> GenericGridBuilder(TRIANGLE_DEFINITION, w, h).build()
+        GridKind.HEXAGON     -> GenericGridBuilder(HEX_DEFINITION, w, h).build()
         GridKind.OCTASQUARE  -> ExoticBuilder.octaSquare(w,h).build()
         GridKind.CAIRO       -> ExoticBuilder.cairo(w,h).build()
         GridKind.RHOMBILLE   -> ExoticBuilder.rhombille(w,h).build()
