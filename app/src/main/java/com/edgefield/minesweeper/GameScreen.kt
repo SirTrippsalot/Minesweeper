@@ -166,6 +166,9 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         }
         map
     }
+    val faceToTile = remember(tileToFace) {
+        tileToFace.entries.associate { (tile, face) -> face to tile }
+    }
     
     Box(
         modifier = Modifier
@@ -185,7 +188,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 .pointerInput(config.touchConfig, waitingForTriple, vm.board) {
                     detectTapGestures(
                         onTap = { offset ->
-                            val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
+                            val face = renderer.hitTest(offset, tiling)
+                            val tile = face?.let { faceToTile[it] }
                             if (waitingForTriple) {
                                 waitingForTriple = false
                                 tile?.let { vm.handleTouch(it, config.touchConfig.tripleTap) }
@@ -200,19 +204,48 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                                 delay(tripleTimeout)
                                 if (waitingForTriple) {
                                     waitingForTriple = false
-                                    val tile = getTileFromGridSystem(doubleTapOffset, tiling, tileToFace, renderer)
+                                    val face = renderer.hitTest(doubleTapOffset, tiling)
+                                    val tile = face?.let { faceToTile[it] }
                                     tile?.let { vm.handleTouch(it, config.touchConfig.doubleTap) }
                                 }
                             }
                         },
                         onLongPress = { offset ->
-                            val tile = getTileFromGridSystem(offset, tiling, tileToFace, renderer)
+                            val face = renderer.hitTest(offset, tiling)
+                            val tile = face?.let { faceToTile[it] }
                             tile?.let { vm.handleTouch(it, config.touchConfig.longPress) }
                         }
                     )
                 }
         ) {
-            drawGameBoardWithGridSystem(vm.board, vm.gameState, tiling, tileToFace, renderer)
+            // Draw each tile using GridSystem geometry
+            vm.board.flatten().forEach { tile ->
+                val face = tileToFace[tile]
+                if (face != null) {
+                    val color = getTileColor(tile, vm.gameState)
+
+                    val path = androidx.compose.ui.graphics.Path()
+                    var e = face.any
+                    var first = true
+                    do {
+                        val pt = renderer.modelToOffset(e.origin)
+                        if (first) {
+                            path.moveTo(pt.x, pt.y)
+                            first = false
+                        } else {
+                            path.lineTo(pt.x, pt.y)
+                        }
+                        e = e.next
+                    } while (e !== face.any)
+                    path.close()
+
+                    drawPath(path, color)
+                    drawPath(path, Color.Black, style = Stroke(width = 1.dp.toPx()))
+
+                    val center = renderer.faceCentroid(face)
+                    drawTileOverlays(tile, center, renderer.size, vm.gameState)
+                }
+            }
         }
         
         // Overlay text numbers on top
@@ -220,7 +253,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
             if (tile.revealed && !tile.hasMine && tile.adjMines > 0) {
                 val face = tileToFace[tile]
                 if (face != null) {
-                    val center = getFaceCentroid(face, renderer)
+                    val center = renderer.faceCentroid(face)
                     
                     Text(
                         text = tile.adjMines.toString(),
@@ -247,126 +280,6 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     )
                 }
             }
-        }
-    }
-}
-
-// GridSystem-based functions
-private fun getTileFromGridSystem(
-    offset: Offset, 
-    tiling: Tiling, 
-    tileToFace: Map<Tile, Face>, 
-    renderer: TilingRenderer
-): Tile? {
-    // Find the closest tile by checking distance to face centroids
-    var closestTile: Tile? = null
-    var minDistance = Float.MAX_VALUE
-    
-    tileToFace.forEach { (tile, face) ->
-        val center = getFaceCentroid(face, renderer)
-        val distance = kotlin.math.sqrt(
-            (offset.x - center.x) * (offset.x - center.x) + 
-            (offset.y - center.y) * (offset.y - center.y)
-        )
-        if (distance < minDistance) {
-            minDistance = distance
-            closestTile = tile
-        }
-    }
-    
-    return closestTile
-}
-
-private fun getFaceCentroid(face: Face, renderer: TilingRenderer): Offset {
-    // Calculate centroid of the face vertices
-    var sumX = 0f
-    var sumY = 0f
-    var count = 0
-    
-    var e = face.any
-    do {
-        val pt = renderer.modelToOffset(e.origin)
-        sumX += pt.x
-        sumY += pt.y
-        count++
-        e = e.next
-    } while (e !== face.any)
-    
-    return Offset(sumX / count, sumY / count)
-}
-
-
-private fun getTileFromOffset(
-    offset: Offset, 
-    tiling: Tiling, 
-    faceToTile: Map<Face, Tile>, 
-    renderer: TilingRenderer
-): Tile? {
-    // Simple hit testing - find the face whose center is closest to the click point
-    var closestTile: Tile? = null
-    var minDistance = Float.MAX_VALUE
-    
-    tiling.faces.forEach { face ->
-        val tile = faceToTile[face]
-        if (tile != null) {
-            val center = getFaceCentroid(face, renderer)
-            val distance = kotlin.math.sqrt(
-                (offset.x - center.x) * (offset.x - center.x) + 
-                (offset.y - center.y) * (offset.y - center.y)
-            )
-            if (distance < minDistance) {
-                minDistance = distance
-                closestTile = tile
-            }
-        }
-    }
-    
-    return closestTile
-}
-
-// Removed duplicate function - using getFaceCentroid instead
-
-private fun DrawScope.drawGameBoardWithGridSystem(
-    board: Array<Array<Tile>>, 
-    gameState: GameState, 
-    tiling: Tiling, 
-    tileToFace: Map<Tile, Face>, 
-    renderer: TilingRenderer
-) {
-    // Draw each tile using GridSystem topology
-    board.flatten().forEach { tile ->
-        val face = tileToFace[tile]
-        if (face != null) {
-            val color = getTileColor(tile, gameState)
-            
-            // Create Compose path from face vertices
-            val path = androidx.compose.ui.graphics.Path()
-            var e = face.any
-            var first = true
-            
-            do {
-                val pt = renderer.modelToOffset(e.origin)
-
-                if (first) {
-                    path.moveTo(pt.x, pt.y)
-                    first = false
-                } else {
-                    path.lineTo(pt.x, pt.y)
-                }
-                e = e.next
-            } while (e !== face.any)
-            
-            path.close()
-            
-            // Draw filled shape
-            drawPath(path, color)
-            
-            // Draw outline
-            drawPath(path, Color.Black, style = Stroke(width = 1.dp.toPx()))
-            
-            // Draw overlays (mines, flags, etc.)
-            val center = getFaceCentroid(face, renderer)
-            drawTileOverlays(tile, center, renderer.size, gameState)
         }
     }
 }
