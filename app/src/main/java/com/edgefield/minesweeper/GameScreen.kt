@@ -449,14 +449,25 @@ private fun DrawScope.drawTileOverlays(tile: Tile, center: Offset, tileSizePx: F
             center = center
         )
     } else if (!tile.revealed && tile.mark == Mark.FLAG) {
-        // Draw green checkmark
         val stroke = 2.dp.toPx()
         val size = tileSizePx * 0.4f
-        val start = Offset(center.x - size / 2f, center.y)
-        val mid = Offset(center.x - size / 8f, center.y + size / 2f)
-        val end = Offset(center.x + size / 2f, center.y - size / 2f)
-        drawLine(Color(0xFF4CAF50), start, mid, strokeWidth = stroke)
-        drawLine(Color(0xFF4CAF50), mid, end, strokeWidth = stroke)
+        if (gameState == GameState.LOST && !tile.hasMine) {
+            // Draw red X for incorrect flag
+            val half = size / 2f
+            val topLeft = Offset(center.x - half, center.y - half)
+            val topRight = Offset(center.x + half, center.y - half)
+            val bottomLeft = Offset(center.x - half, center.y + half)
+            val bottomRight = Offset(center.x + half, center.y + half)
+            drawLine(Color.Red, topLeft, bottomRight, strokeWidth = stroke)
+            drawLine(Color.Red, topRight, bottomLeft, strokeWidth = stroke)
+        } else {
+            // Draw green checkmark
+            val start = Offset(center.x - size / 2f, center.y)
+            val mid = Offset(center.x - size / 8f, center.y + size / 2f)
+            val end = Offset(center.x + size / 2f, center.y - size / 2f)
+            drawLine(Color(0xFF4CAF50), start, mid, strokeWidth = stroke)
+            drawLine(Color(0xFF4CAF50), mid, end, strokeWidth = stroke)
+        }
     } else if (!tile.revealed && tile.mark == Mark.QUESTION) {
         // Draw question mark
         drawCircle(
