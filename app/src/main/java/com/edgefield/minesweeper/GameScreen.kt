@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.clipToBounds
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
@@ -50,9 +51,7 @@ fun GameScreen(vm: GameViewModel) {
     val tileSize = 40.dp
     
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(8.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
         // Top menu with stats and controls
         SmallTopAppBar(
@@ -101,7 +100,9 @@ fun GameScreen(vm: GameViewModel) {
         Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .clipToBounds(),
             contentAlignment = Alignment.Center
         ) {
             GameBoard(vm, tileSize)
@@ -282,6 +283,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 translationY = pan.y
                 scaleX = scale
                 scaleY = scale
+                clip = true
             }
             .pointerInput(Unit) {
                 detectTransformGestures { centroid, panChange, zoom, _ ->
