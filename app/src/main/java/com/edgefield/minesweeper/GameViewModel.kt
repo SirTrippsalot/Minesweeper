@@ -1,17 +1,19 @@
 // ───────────────── GameViewModel.kt ─────────────────
 package com.edgefield.minesweeper
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.edgefield.minesweeper.PrefsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     var gameConfig by mutableStateOf(GameConfig())
         private set
@@ -31,6 +33,7 @@ class GameViewModel : ViewModel() {
     init {
         Log.d("GameViewModel", "Initializing GameViewModel")
         try {
+            gameConfig = PrefsManager.loadGameConfig(getApplication())
             Log.d("GameViewModel", "Creating GameEngine with config: $gameConfig")
             engine = GameEngine(gameConfig)
             Log.d("GameViewModel", "GameEngine created successfully")
@@ -93,6 +96,7 @@ class GameViewModel : ViewModel() {
 
     fun updateConfig(newConfig: GameConfig) {
         gameConfig = newConfig
+        PrefsManager.saveGameConfig(getApplication(), newConfig)
         reset()
     }
 
