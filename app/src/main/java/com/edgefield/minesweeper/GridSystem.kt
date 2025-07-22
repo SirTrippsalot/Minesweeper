@@ -233,6 +233,71 @@ private val TRIANGLE_DEFINITION = PolygonDefinition(
     }
 }
 
+private val OCTASQUARE_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.25 to 0.0,
+        0.75 to 0.0,
+        1.0 to 0.25,
+        1.0 to 0.75,
+        0.75 to 1.0,
+        0.25 to 1.0,
+        0.0 to 0.75,
+        0.0 to 0.25
+    )
+) { c, r, v, _ ->
+    c + v.first to r + v.second
+}
+
+private val CAIRO_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.5 to 0.0,
+        1.0 to 0.4,
+        0.8 to 1.0,
+        0.2 to 1.0,
+        0.0 to 0.4
+    )
+) { c, r, v, _ ->
+    c + v.first to r + v.second
+}
+
+private val RHOMBILLE_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.25 to 0.0,
+        0.75 to 0.0,
+        1.0 to 0.5,
+        0.75 to 1.0,
+        0.25 to 1.0,
+        0.0 to 0.5
+    )
+) { c, r, v, _ ->
+    c + v.first to r + v.second
+}
+
+private val SNUB_SQUARE_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.0 to 0.2,
+        0.4 to 0.0,
+        1.0 to 0.5,
+        0.6 to 1.0,
+        0.0 to 0.8
+    )
+) { c, r, v, _ ->
+    c + v.first to r + v.second
+}
+
+private val PENROSE_DEFINITION = PolygonDefinition(
+    vertices = listOf(
+        0.5 to 0.0,
+        1.0 to 0.4,
+        1.0 to 0.6,
+        0.5 to 1.0,
+        0.0 to 0.6,
+        0.0 to 0.4
+    )
+) { c, r, v, _ ->
+    c + v.first to r + v.second
+}
+
 //──────────────────────────────────────────────────────────────────────────────
 //  4 ▍ Concrete generators
 //──────────────────────────────────────────────────────────────────────────────
@@ -258,41 +323,31 @@ abstract class ExoticBuilder : GridBuilder() {
     companion object {
         fun octaSquare(w:Int, h:Int) : GridBuilder = object: ExoticBuilder() {
             override fun build(): Tiling {
-                // TODO: implement 4.8² Archimedean tiling
-                // For now, fall back to square grid
-                return SquareGridBuilder(w, h).build()
+                return GenericGridBuilder(OCTASQUARE_DEFINITION, w, h).build()
             }
         }
 
         fun cairo(w:Int, h:Int) : GridBuilder = object: ExoticBuilder() {
             override fun build(): Tiling {
-                // TODO: implement Cairo pentagonal tiling
-                // For now, fall back to square grid
-                return SquareGridBuilder(w, h).build()
+                return GenericGridBuilder(CAIRO_DEFINITION, w, h).build()
             }
         }
 
         fun rhombille(w:Int, h:Int) : GridBuilder = object: ExoticBuilder() {
             override fun build(): Tiling {
-                // TODO: implement Rhombille (diamonds)
-                // For now, fall back to square grid
-                return SquareGridBuilder(w, h).build()
+                return GenericGridBuilder(RHOMBILLE_DEFINITION, w, h).build()
             }
         }
 
         fun snubSquare(w:Int, h:Int) : GridBuilder = object: ExoticBuilder() {
             override fun build(): Tiling {
-                // TODO: implement snub‑square 5‑tiling
-                // For now, fall back to square grid
-                return SquareGridBuilder(w, h).build()
+                return GenericGridBuilder(SNUB_SQUARE_DEFINITION, w, h).build()
             }
         }
 
         fun penrose(radius:Int) : GridBuilder = object: ExoticBuilder() {
             override fun build(): Tiling {
-                // TODO: implement Penrose (kite & dart) – non‑periodic generator
-                // For now, fall back to square grid
-                return SquareGridBuilder(radius, radius).build()
+                return GenericGridBuilder(PENROSE_DEFINITION, radius, radius).build()
             }
         }
     }
@@ -394,11 +449,11 @@ object GridFactory {
         GridKind.SQUARE      -> GenericGridBuilder(SQUARE_DEFINITION, w, h).build()
         GridKind.TRIANGLE    -> GenericGridBuilder(TRIANGLE_DEFINITION, w, h).build()
         GridKind.HEXAGON     -> GenericGridBuilder(HEX_DEFINITION, w, h).build()
-        GridKind.OCTASQUARE  -> ExoticBuilder.octaSquare(w,h).build()
-        GridKind.CAIRO       -> ExoticBuilder.cairo(w,h).build()
-        GridKind.RHOMBILLE   -> ExoticBuilder.rhombille(w,h).build()
-        GridKind.SNUB_SQUARE -> ExoticBuilder.snubSquare(w,h).build()
-        GridKind.PENROSE     -> ExoticBuilder.penrose(w).build()
+        GridKind.OCTASQUARE  -> GenericGridBuilder(OCTASQUARE_DEFINITION, w, h).build()
+        GridKind.CAIRO       -> GenericGridBuilder(CAIRO_DEFINITION, w, h).build()
+        GridKind.RHOMBILLE   -> GenericGridBuilder(RHOMBILLE_DEFINITION, w, h).build()
+        GridKind.SNUB_SQUARE -> GenericGridBuilder(SNUB_SQUARE_DEFINITION, w, h).build()
+        GridKind.PENROSE     -> GenericGridBuilder(PENROSE_DEFINITION, w, h).build()
     }
 }
 
