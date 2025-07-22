@@ -343,6 +343,49 @@ class TilingRenderer(val size: Float, bounds: Bounds) {
     fun draw(canvas: Canvas, tiling: Tiling, paint: Paint) {
         tiling.faces.forEach { f -> canvas.drawPath(facePath(f), paint) }
     }
+
+    fun drawTiling(canvas: Canvas, tiling: Tiling) {
+        val paint = Paint().apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
+        }
+        draw(canvas, tiling, paint)
+    }
+
+    fun faceCentroid(face: Face): Offset {
+        var sumX = 0f
+        var sumY = 0f
+        var count = 0
+
+        var e = face.any
+        do {
+            val pt = modelToOffset(e.origin)
+            sumX += pt.x
+            sumY += pt.y
+            count++
+            e = e.next
+        } while (e !== face.any)
+
+        return Offset(sumX / count, sumY / count)
+    }
+
+    fun hitTest(point: Offset, tiling: Tiling): Face? {
+        var closest: Face? = null
+        var minDistance = Float.MAX_VALUE
+
+        tiling.faces.forEach { face ->
+            val c = faceCentroid(face)
+            val dx = point.x - c.x
+            val dy = point.y - c.y
+            val dist = dx * dx + dy * dy
+            if (dist < minDistance) {
+                minDistance = dist
+                closest = face
+            }
+        }
+
+        return closest
+    }
 }
 
 //──────────────────────────────────────────────────────────────────────────────
