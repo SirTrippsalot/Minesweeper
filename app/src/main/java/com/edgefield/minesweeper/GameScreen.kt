@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ private fun Offset.isZeroish(epsilon: Float = 0.5f): Boolean {
     return kotlin.math.abs(x) < epsilon && kotlin.math.abs(y) < epsilon
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(vm: GameViewModel) {
     var showSettings by remember { mutableStateOf(false) }
