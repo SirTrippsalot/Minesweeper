@@ -30,6 +30,7 @@ You can also open the project in Android Studio and run it directly from the IDE
 - Several board layouts: Square, Triangle, Hexagon, Octasquare, Cairo, Rhombille, Snub Square and Penrose.
 - Configurable edge wrapping (left/right, top/bottom or full torus).
 - Gesture-based controls with zoom and pan support.
+- Settings are saved between sessions.
 
 ### Selecting a Grid Type
 
