@@ -70,11 +70,26 @@ data class GameStats(
     val efficiency: Double get() = if (totalMoves > 0) (minesFound.toDouble() / totalMoves) * 100.0 else 0.0
 }
 
-data class Tile(
+class Tile(
     val x: Int,
     val y: Int,
     var hasMine: Boolean = false,
     var revealed: Boolean = false,
     var mark: Mark = Mark.NONE,
     var adjMines: Int = 0
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Tile) return false
+        return x == other.x && y == other.y
+    }
+
+    override fun hashCode(): Int {
+        var result = x
+        result = 31 * result + y
+        return result
+    }
+
+    override fun toString(): String =
+        "Tile(x=$x, y=$y, hasMine=$hasMine, revealed=$revealed, mark=$mark, adjMines=$adjMines)"
+}
