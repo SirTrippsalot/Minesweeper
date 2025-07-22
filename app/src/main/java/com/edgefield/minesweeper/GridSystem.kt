@@ -64,22 +64,20 @@ class Tiling internal constructor(
 
     /** Returns the other cells that share an edge with f in O(#edges). */
     fun neighbours(f: Face): List<Face> {
-        val out = mutableListOf<Face>()
+        val out = linkedSetOf<Face>()
         var e = f.any
         do {
             try {
                 val twinFace = e.twin.face
                 // Only add if it's not the boundary face (has sides > 0)
-                if (twinFace.sides > 0) {
-                    out += twinFace
-                }
+                if (twinFace.sides > 0) out.add(twinFace)
             } catch (ex: UninitializedPropertyAccessException) {
                 // Skip boundary edges that don't have twins
             }
             e = e.next
         } while(e !== f.any)
         extras[f]?.let { out.addAll(it) }
-        return out
+        return out.toList()
     }
 
     /** Lazy vertex creation shared by all builders. */
