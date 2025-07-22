@@ -227,8 +227,6 @@ private fun squareStep(delta: Pair<Int, Int>, size: Float): Offset =
     Offset(delta.first * size, delta.second * size)
 
 @Composable
-
-@Composable
 private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) {
     val config = vm.gameConfig
     val density = LocalDensity.current.density
