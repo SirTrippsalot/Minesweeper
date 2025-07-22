@@ -285,8 +285,15 @@ class GameEngine(private val config: GameConfig) {
                 else -> directionOffsets
             }
             offsets.forEach { (dx, dy) ->
-                val (nx, ny) = wrapCoord(tile.x + dx, tile.y + dy)
-                val neighbor = board[ny][nx]
+                var nx = tile.x + dx
+                var ny = tile.y + dy
+                if (config.gridType.kind == GridKind.TRIANGLE && config.rows % 2 == 1) {
+                    val up = (tile.x + tile.y) % 2 == 0
+                    if (ny < 0 && !up && dy == -1) nx -= 1
+                    else if (ny >= config.rows && up && dy == 1) nx += 1
+                }
+                val (wx, wy) = wrapCoord(nx, ny)
+                val neighbor = board[wy][wx]
                 if (neighbor !== tile && seen.add(neighbor)) {
                     adjacent += neighbor
                 }
