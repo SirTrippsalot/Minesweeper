@@ -60,7 +60,7 @@ data class GameConfig(
 }
 
 data class GameStats(
-    val startTime: Long = System.currentTimeMillis(),
+    var startTime: Long = System.currentTimeMillis(),
     var endTime: Long? = null,
     var processCount: Int = 0,
     var totalMoves: Int = 0,
