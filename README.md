@@ -31,6 +31,7 @@ You can also open the project in Android Studio and run it directly from the IDE
 - Configurable edge wrapping (left/right, top/bottom or full torus).
 - Gesture-based controls with zoom and pan support.
 - Settings are saved between sessions.
+- Flags appear as darker water and return to gray when removed.
 
 ### Selecting a Grid Type
 
