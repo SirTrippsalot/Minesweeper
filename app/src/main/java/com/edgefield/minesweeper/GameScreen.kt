@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.rememberCoroutineScope
 import android.view.ViewConfiguration
 import androidx.compose.ui.zIndex
+import com.edgefield.minesweeper.graph.Cell
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -45,6 +46,9 @@ private fun Color.ghostly(isGhost: Boolean) = if (isGhost) copy(alpha = GHOST_AL
 private fun Offset.isZeroish(epsilon: Float = 0.5f): Boolean {
     return kotlin.math.abs(x) < epsilon && kotlin.math.abs(y) < epsilon
 }
+
+private fun Cell.cx(): Int = id.substringBefore('_').toInt()
+private fun Cell.cy(): Int = id.substringAfter('_').toInt()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,18 +191,20 @@ fun GameScreen(vm: GameViewModel) {
 }
 
 private fun computeDirectionOffsets(
-    board: Array<Array<Tile>>,
+    board: Array<Array<Cell>>,
     tiling: Tiling,
-    tileToFace: Map<Tile, Face>,
-    faceToTile: Map<Face, Tile>,
+    cellToFace: Map<Cell, Face>,
+    faceToCell: Map<Face, Cell>,
     kind: GridKind
 ): List<Pair<Int, Int>> {
     val expected = kind.neighborCount
-    board.flatten().forEach { tile ->
-        val face = tileToFace[tile] ?: return@forEach
-        val neighbors = tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
+    board.flatten().forEach { cell ->
+        val face = cellToFace[cell] ?: return@forEach
+        val neighbors = tiling.neighbours(face).mapNotNull { nf -> faceToCell[nf] }
         if (neighbors.size == expected) {
-            return neighbors.map { it.x - tile.x to it.y - tile.y }
+            val cx = cell.cx()
+            val cy = cell.cy()
+            return neighbors.map { it.cx() - cx to it.cy() - cy }
         }
     }
     return when (kind) {
@@ -209,17 +215,17 @@ private fun computeDirectionOffsets(
         GridKind.TRIANGLE -> listOf(-1 to 0, 1 to 0, 0 to 1, 0 to -1)
         else -> {
             val first = board[0][0]
-            val face = tileToFace[first] ?: return emptyList()
-            tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
-                .map { it.x - first.x to it.y - first.y }
+            val face = cellToFace[first] ?: return emptyList()
+            tiling.neighbours(face).mapNotNull { nf -> faceToCell[nf] }
+                .map { it.cx() - first.cx() to it.cy() - first.cy() }
         }
     }
 }
 
 private fun computeRenderOffsets(
-    board: Array<Array<Tile>>,
+    board: Array<Array<Cell>>,
     renderer: TilingRenderer,
-    tileToFace: Map<Tile, Face>,
+    cellToFace: Map<Cell, Face>,
     offsets: List<Pair<Int, Int>>,
     kind: GridKind
 ): Map<Pair<Int, Int>, Pair<Offset, Offset>> {
@@ -235,8 +241,8 @@ private fun computeRenderOffsets(
                 if (nx in board[y].indices && ny in board.indices) {
                     val a = board[y][x]
                     val b = board[ny][nx]
-                    val fa = tileToFace[a] ?: continue
-                    val fb = tileToFace[b] ?: continue
+                    val fa = cellToFace[a] ?: continue
+                    val fb = cellToFace[b] ?: continue
                     val ca = renderer.faceCentroid(fa)
                     val cb = renderer.faceCentroid(fb)
                     val diff = Offset(cb.x - ca.x, cb.y - ca.y)
@@ -305,17 +311,26 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         TilingRenderer(tileSizePx * scaleMultiplier, bounds)
     }
     
-    // Map tiles to faces (same order as GameEngine)
-    val (tileToFace, faceToTile) = remember(tiling, vm.board) {
-        mapTilesToFaces(vm.board.flatten(), tiling.faces)
+    // Build a row-major matrix of cells for consistent ordering
+    val cellMatrix = remember(vm.board) {
+        Array(config.rows) { y ->
+            Array(config.cols) { x ->
+                vm.board.getCell("${x}_${y}")!!
+            }
+        }
+    }
+
+    // Map cells to faces (same order as GameEngine)
+    val (cellToFace, faceToCell) = remember(tiling, vm.board) {
+        mapCellsToFaces(cellMatrix.flatten(), tiling.faces)
     }
 
     // Offsets for neighbour directions and their screen translations
     val directionOffsets = remember(tiling, vm.board) {
-        computeDirectionOffsets(vm.board, tiling, tileToFace, faceToTile, config.gridType.kind)
+        computeDirectionOffsets(cellMatrix, tiling, cellToFace, faceToCell, config.gridType.kind)
     }
     val renderOffsets = remember(renderer, directionOffsets) {
-        computeRenderOffsets(vm.board, renderer, tileToFace, directionOffsets, config.gridType.kind)
+        computeRenderOffsets(cellMatrix, renderer, cellToFace, directionOffsets, config.gridType.kind)
     }
     
     var scale by remember { mutableStateOf(1f) }
@@ -355,12 +370,12 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     detectTapGestures(
                         onTap = { offset ->
                             val face = renderer.hitTest(offset, tiling)
-                            val tile = face?.let { faceToTile[it] }
+                            val cell = face?.let { faceToCell[it] }
                             if (waitingForTriple) {
                                 waitingForTriple = false
-                                tile?.let { vm.handleTouch(it, config.touchConfig.tripleTap) }
+                                cell?.let { vm.handleTouch(it, config.touchConfig.tripleTap) }
                             } else {
-                                tile?.let { vm.handleTouch(it, config.touchConfig.singleTap) }
+                                cell?.let { vm.handleTouch(it, config.touchConfig.singleTap) }
                             }
                         },
                         onDoubleTap = { offset ->
@@ -371,26 +386,27 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                                 if (waitingForTriple) {
                                     waitingForTriple = false
                                     val face = renderer.hitTest(doubleTapOffset, tiling)
-                                    val tile = face?.let { faceToTile[it] }
-                                    tile?.let { vm.handleTouch(it, config.touchConfig.doubleTap) }
+                                    val cell = face?.let { faceToCell[it] }
+                                    cell?.let { vm.handleTouch(it, config.touchConfig.doubleTap) }
                                 }
                             }
                         },
                         onLongPress = { offset ->
                             val face = renderer.hitTest(offset, tiling)
-                            val tile = face?.let { faceToTile[it] }
-                            tile?.let { vm.handleTouch(it, config.touchConfig.longPress) }
+                            val cell = face?.let { faceToCell[it] }
+                            cell?.let { vm.handleTouch(it, config.touchConfig.longPress) }
                         }
                     )
                 }
         ) {
             fun drawFace(
-                tile: Tile,
+                cell: Cell,
                 face: Face,
                 offset: Offset = Offset.Zero,
                 ghost: Boolean = false
             ) {
-                val color = getTileColor(tile, vm.gameState).ghostly(ghost)
+                val adj = vm.board.countNeighborMines(cell.id)
+                val color = getCellColor(cell, adj, vm.gameState).ghostly(ghost)
 
                 val path = Path()
                 var e = face.any
@@ -409,7 +425,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 path.close()
 
                 val center = renderer.faceCentroid(face) + offset
-                if (!tile.revealed) {
+                if (!cell.isRevealed) {
                     val brush = Brush.radialGradient(
                         colors = listOf(Color(0x80CCCCCC).ghostly(ghost), color),
                         center = center,
@@ -418,8 +434,8 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     drawPath(path = path, brush = brush)
                 } else {
                     drawPath(path, color)
-                    if (!tile.hasMine) {
-                        if (tile.adjMines == 0) {
+                    if (!cell.isMine) {
+                        if (adj == 0) {
                             drawSandEffect(path, ghost)
                         } else {
                             drawWaterEffect(path, ghost)
@@ -433,7 +449,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 )
 
                 drawTileOverlays(
-                    tile,
+                    cell,
                     center,
                     renderer.size,
                     vm.gameState,
@@ -441,26 +457,26 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 )
             }
 
-            // Draw each tile using GridSystem geometry
-            vm.board.flatten().forEach { tile ->
-                val face = tileToFace[tile]
+            // Draw each cell using GridSystem geometry
+            cellMatrix.flatten().forEach { cell ->
+                val face = cellToFace[cell]
                 if (face != null) {
-                    drawFace(tile, face)
+                    drawFace(cell, face)
                 }
             }
 
             if (config.edgeMode) {
-                vm.board.flatten().forEach { base ->
-                    val baseFace = tileToFace[base] ?: return@forEach
+                cellMatrix.flatten().forEach { base ->
+                    val baseFace = cellToFace[base] ?: return@forEach
                     val baseCenter = renderer.faceCentroid(baseFace)
                     val offsets = when (config.gridType.kind) {
-                        GridKind.TRIANGLE -> triangleOffsetsFor(base.x, base.y)
+                        GridKind.TRIANGLE -> triangleOffsetsFor(base.cx(), base.cy())
                         GridKind.SQUARE -> squareOffsets
                         else -> directionOffsets
                     }
                     offsets.forEach { delta ->
-                        var nx = base.x + delta.first
-                        var ny = base.y + delta.second
+                        var nx = base.cx() + delta.first
+                        var ny = base.cy() + delta.second
                         if (config.gridType.kind == GridKind.TRIANGLE && config.rows % 2 == 1) {
                             if (ny < 0 && delta.second == -1) nx -= 1
                             else if (ny >= config.rows && delta.second == 1) nx += 1
@@ -468,14 +484,14 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                         if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
                             val wx = ((nx % config.cols) + config.cols) % config.cols
                             val wy = ((ny % config.rows) + config.rows) % config.rows
-                            val wrappedTile = vm.board[wy][wx]
-                            val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
+                            val wrappedCell = cellMatrix[wy][wx]
+                            val wrappedFace = cellToFace[wrappedCell] ?: return@forEach
                             val step = when (config.gridType.kind) {
-                                GridKind.TRIANGLE -> triangleStep(delta, (base.x + base.y) % 2 == 0, renderer.size)
+                                GridKind.TRIANGLE -> triangleStep(delta, (base.cx() + base.cy()) % 2 == 0, renderer.size)
                                 GridKind.SQUARE -> squareStep(delta, renderer.size)
                                 GridKind.HEXAGON -> {
                                     val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
-                                    if (base.x % 2 == 1) pair.second else pair.first
+                                    if (base.cx() % 2 == 1) pair.second else pair.first
                                 }
                                 else -> {
                                     val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
@@ -488,7 +504,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                                 baseCenter.y + step.y - wrappedCenter.y
                             )
                             if (!offset.isZeroish()) {
-                                drawFace(wrappedTile, wrappedFace, offset, true)
+                                drawFace(wrappedCell, wrappedFace, offset, true)
                             }
                         }
                     }
@@ -517,17 +533,18 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
         // Overlay text numbers on top
         @Composable
         fun drawNumber(
-            tile: Tile,
+            cell: Cell,
             face: Face,
             offset: Offset = Offset.Zero,
             ghost: Boolean = false
         ) {
-            if (tile.revealed && !tile.hasMine && tile.adjMines > 0) {
+            val count = vm.board.countNeighborMines(cell.id)
+            if (cell.isRevealed && !cell.isMine && count > 0) {
                 val center = renderer.faceCentroid(face) + offset
 
                     Text(
-                        text = tile.adjMines.toString(),
-                        color = when (tile.adjMines) {
+                        text = count.toString(),
+                        color = when (count) {
                             1 -> Color.Blue
                             2 -> Color.Green
                             3 -> Color.Red
@@ -551,25 +568,25 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
             }
         }
 
-        vm.board.flatten().forEach { tile ->
-            val face = tileToFace[tile]
+        cellMatrix.flatten().forEach { cell ->
+            val face = cellToFace[cell]
             if (face != null) {
-                drawNumber(tile, face)
+                drawNumber(cell, face)
             }
         }
 
         if (config.edgeMode) {
-            vm.board.flatten().forEach { base ->
-                val baseFace = tileToFace[base] ?: return@forEach
+            cellMatrix.flatten().forEach { base ->
+                val baseFace = cellToFace[base] ?: return@forEach
                 val baseCenter = renderer.faceCentroid(baseFace)
                 val offsets = when (config.gridType.kind) {
-                    GridKind.TRIANGLE -> triangleOffsetsFor(base.x, base.y)
+                    GridKind.TRIANGLE -> triangleOffsetsFor(base.cx(), base.cy())
                     GridKind.SQUARE -> squareOffsets
                     else -> directionOffsets
                 }
                 offsets.forEach { delta ->
-                    var nx = base.x + delta.first
-                    var ny = base.y + delta.second
+                    var nx = base.cx() + delta.first
+                    var ny = base.cy() + delta.second
                     if (config.gridType.kind == GridKind.TRIANGLE && config.rows % 2 == 1) {
                         if (ny < 0 && delta.second == -1) nx -= 1
                         else if (ny >= config.rows && delta.second == 1) nx += 1
@@ -577,14 +594,14 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                     if (nx !in 0 until config.cols || ny !in 0 until config.rows) {
                         val wx = ((nx % config.cols) + config.cols) % config.cols
                         val wy = ((ny % config.rows) + config.rows) % config.rows
-                        val wrappedTile = vm.board[wy][wx]
-                        val wrappedFace = tileToFace[wrappedTile] ?: return@forEach
+                        val wrappedCell = cellMatrix[wy][wx]
+                        val wrappedFace = cellToFace[wrappedCell] ?: return@forEach
                         val step = when (config.gridType.kind) {
-                            GridKind.TRIANGLE -> triangleStep(delta, (base.x + base.y) % 2 == 0, renderer.size)
+                            GridKind.TRIANGLE -> triangleStep(delta, (base.cx() + base.cy()) % 2 == 0, renderer.size)
                             GridKind.SQUARE -> squareStep(delta, renderer.size)
                             GridKind.HEXAGON -> {
                                 val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
-                                if (base.x % 2 == 1) pair.second else pair.first
+                                if (base.cx() % 2 == 1) pair.second else pair.first
                             }
                             else -> {
                                 val pair = renderOffsets[delta] ?: (Offset.Zero to Offset.Zero)
@@ -597,7 +614,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                             baseCenter.y + step.y - wrappedCenter.y
                         )
                         if (!offset.isZeroish()) {
-                            drawNumber(wrappedTile, wrappedFace, offset, true)
+                            drawNumber(wrappedCell, wrappedFace, offset, true)
                         }
                     }
                 }
@@ -610,37 +627,36 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
 
 
 
-private fun getTileColor(tile: Tile, gameState: GameState): Color {
+private fun getCellColor(cell: Cell, adj: Int, gameState: GameState): Color {
     return when {
-        !tile.revealed && tile.mark == Mark.FLAG -> Color(0xFF64B5F6) // Darker blue water for flagged tiles
-        !tile.revealed && tile.mark == Mark.QUESTION -> Color(0xFFFF9800) // Orange for questions
-        !tile.revealed -> Color(0xFF9E9E9E) // Gray for unrevealed
-        tile.hasMine && gameState == GameState.LOST -> Color(0xFFF44336) // Red for mines
-        tile.revealed && tile.adjMines == 0 -> Color(0xFFFFF9C4) // Sand for empty island
-        tile.revealed -> Color(0xFFB3E5FC) // Light blue for ocean
+        !cell.isRevealed && cell.isFlagged -> Color(0xFF64B5F6) // Darker blue water for flagged cells
+        !cell.isRevealed -> Color(0xFF9E9E9E) // Gray for unrevealed
+        cell.isMine && gameState == GameState.LOST -> Color(0xFFF44336) // Red for mines
+        cell.isRevealed && adj == 0 -> Color(0xFFFFF9C4) // Sand for empty island
+        cell.isRevealed -> Color(0xFFB3E5FC) // Light blue for ocean
         else -> Color(0xFFE0E0E0) // Default fallback
     }
 }
 
 private fun DrawScope.drawTileOverlays(
-    tile: Tile,
+    cell: Cell,
     center: Offset,
     tileSizePx: Float,
     gameState: GameState,
     ghost: Boolean = false
 ) {
     // Draw mines, flags, and question marks as overlays
-    if (tile.hasMine && gameState == GameState.LOST) {
+    if (cell.isMine && gameState == GameState.LOST) {
         // Draw mine
         drawCircle(
             color = Color.Black.ghostly(ghost),
             radius = tileSizePx * 0.15f,
             center = center
         )
-    } else if (!tile.revealed && tile.mark == Mark.FLAG) {
+    } else if (!cell.isRevealed && cell.isFlagged) {
         val stroke = 2.dp.toPx()
         val size = tileSizePx * 0.4f
-        if (gameState == GameState.LOST && !tile.hasMine) {
+        if (gameState == GameState.LOST && !cell.isMine) {
             // Draw red X for incorrect flag
             val half = size / 2f
             val topLeft = Offset(center.x - half, center.y - half)
@@ -657,14 +673,6 @@ private fun DrawScope.drawTileOverlays(
             drawLine(Color(0xFF4CAF50).ghostly(ghost), start, mid, strokeWidth = stroke)
             drawLine(Color(0xFF4CAF50).ghostly(ghost), mid, end, strokeWidth = stroke)
         }
-    } else if (!tile.revealed && tile.mark == Mark.QUESTION) {
-        // Draw question mark
-        drawCircle(
-            color = Color.Blue.ghostly(ghost),
-            radius = tileSizePx * 0.08f,
-            center = center,
-            style = Stroke(width = 2.dp.toPx())
-        )
     }
 }
 
