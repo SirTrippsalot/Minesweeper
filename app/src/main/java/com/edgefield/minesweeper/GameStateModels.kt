@@ -5,7 +5,8 @@ data class CellState(
     val id: String,
     val isMine: Boolean,
     val isRevealed: Boolean,
-    val isFlagged: Boolean
+    val isFlagged: Boolean,
+    val isMarked: Boolean
 )
 
 data class EngineState(

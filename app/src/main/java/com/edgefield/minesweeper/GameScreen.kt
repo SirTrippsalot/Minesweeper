@@ -32,6 +32,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.rememberCoroutineScope
 import android.view.ViewConfiguration
+import android.graphics.Paint
+import android.graphics.Typeface
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.zIndex
 import com.edgefield.minesweeper.graph.Cell
 import kotlinx.coroutines.delay
@@ -628,6 +631,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
 private fun getCellColor(cell: Cell, adj: Int, gameState: GameState): Color {
     return when {
         !cell.isRevealed && cell.isFlagged -> Color(0xFF64B5F6) // Darker blue water for flagged cells
+        !cell.isRevealed && cell.isMarked -> Color(0xFFFFF176) // Yellow for marked cells
         !cell.isRevealed -> Color(0xFF9E9E9E) // Gray for unrevealed
         cell.isMine && gameState == GameState.LOST -> Color(0xFFF44336) // Red for mines
         cell.isRevealed && adj == 0 -> Color(0xFFFFF9C4) // Sand for empty island
@@ -671,6 +675,14 @@ private fun DrawScope.drawTileOverlays(
             drawLine(Color(0xFF4CAF50).ghostly(ghost), start, mid, strokeWidth = stroke)
             drawLine(Color(0xFF4CAF50).ghostly(ghost), mid, end, strokeWidth = stroke)
         }
+    } else if (!cell.isRevealed && cell.isMarked) {
+        val paint = Paint().apply {
+            color = Color.Black.toArgb()
+            textAlign = Paint.Align.CENTER
+            textSize = tileSizePx * 0.5f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        drawContext.canvas.nativeCanvas.drawText("?", center.x, center.y + paint.textSize / 3f, paint)
     }
 }
 
