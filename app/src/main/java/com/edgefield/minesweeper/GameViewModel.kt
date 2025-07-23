@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.edgefield.minesweeper.PrefsManager
+import com.edgefield.minesweeper.graph.Cell
+import com.edgefield.minesweeper.graph.GameBoard
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
@@ -20,8 +22,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     
     private var engine: GameEngine
     
-    var board by mutableStateOf(arrayOf<Array<Tile>>())
+    var board by mutableStateOf(GameBoard())
         private set
+
+    val cells: List<Cell>
+        get() {
+            val list = mutableListOf<Cell>()
+            for (y in 0 until gameConfig.rows) {
+                for (x in 0 until gameConfig.cols) {
+                    board.getCell("${x}_${y}")?.let { list += it }
+                }
+            }
+            return list
+        }
     var gameState by mutableStateOf(GameState.PLAYING)
         private set
     var stats by mutableStateOf(GameStats())
@@ -38,7 +51,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             engine = GameEngine(gameConfig)
             Log.d("GameViewModel", "GameEngine created successfully")
             
-            board = engine.board
+            board = cloneBoard(engine.board)
             gameState = engine.gameState
             stats = engine.stats
             
@@ -51,42 +64,26 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun handleTouch(tile: Tile, action: TouchAction) {
+    fun handleTouch(cell: Cell, action: TouchAction) {
         if (engine.isFirstClick) {
-            reveal(tile)
+            reveal(cell)
         } else {
             when (action) {
-                TouchAction.REVEAL -> reveal(tile)
-                TouchAction.FLAG -> toggleFlag(tile)
-                TouchAction.QUESTION -> toggleQuestion(tile)
-                TouchAction.MARK_CYCLE -> cycleMark(tile)
+                TouchAction.REVEAL -> reveal(cell)
+                TouchAction.FLAG, TouchAction.QUESTION, TouchAction.MARK_CYCLE -> toggleFlag(cell)
                 TouchAction.NONE -> { /* Do nothing */ }
             }
         }
         updateState()
     }
 
-    private fun reveal(tile: Tile) {
-        gameState = engine.reveal(tile)
+    private fun reveal(cell: Cell) {
+        gameState = engine.reveal(cell)
     }
 
-    private fun toggleFlag(tile: Tile) {
-        val newMark = if (tile.mark == Mark.FLAG) Mark.NONE else Mark.FLAG
-        engine.toggleMark(tile, newMark)
-    }
-    
-    private fun toggleQuestion(tile: Tile) {
-        val newMark = if (tile.mark == Mark.QUESTION) Mark.NONE else Mark.QUESTION
-        engine.toggleMark(tile, newMark)
-    }
-
-    private fun cycleMark(tile: Tile) {
-        val next = when (tile.mark) {
-            Mark.NONE -> Mark.QUESTION
-            Mark.QUESTION -> Mark.FLAG
-            Mark.FLAG -> Mark.NONE
-        }
-        engine.toggleMark(tile, next)
+    private fun toggleFlag(cell: Cell) {
+        val newFlag = !cell.isFlagged
+        engine.toggleMark(cell, newFlag)
     }
     
     fun processMarkedTiles() {
@@ -107,12 +104,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     private fun updateState() {
-        // Force recomposition by creating new array references
-        board = Array(engine.board.size) { row ->
-            Array(engine.board[row].size) { col ->
-                engine.board[row][col]
-            }
-        }
+        board = cloneBoard(engine.board)
         gameState = engine.gameState
         stats = GameStats(
             startTime = engine.stats.startTime,
@@ -147,6 +139,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveState() {
         PrefsManager.saveGameState(getApplication(), engine.exportState())
+    }
+
+    private fun cloneBoard(source: GameBoard): GameBoard {
+        val copy = GameBoard()
+        source.cells.values.forEach { cell ->
+            val newCell = Cell(
+                id = cell.id,
+                vertices = cell.vertices.toSet(),
+                isMine = cell.isMine,
+                isRevealed = cell.isRevealed,
+                isFlagged = cell.isFlagged
+            )
+            copy.addCell(newCell)
+        }
+        return copy
     }
 
     fun loadState() {
