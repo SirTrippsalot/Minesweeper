@@ -27,8 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.rememberCoroutineScope
 import android.view.ViewConfiguration
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -53,28 +56,76 @@ fun GameScreen(vm: GameViewModel) {
         modifier = Modifier.fillMaxSize()
     ) {
         // Top menu with stats and controls
+        val sandColor = Color(0xFFF5EBDD)
+        val textColor = Color(0xFF2C3E50)
         SmallTopAppBar(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(1f),
             colors = TopAppBarDefaults.smallTopAppBarColors(
-                containerColor = Color(0xFFFFF9C4)
+                containerColor = sandColor
             ),
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Mines: ${vm.getRemainingMines()}/${vm.gameConfig.mineCount}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(" > ")
-                    Text(
-                        "Time: ${vm.getElapsedTimeFormatted()}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(" > ")
-                    Text(
-                        "Moves: ${vm.stats.totalMoves}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_mine),
+                            contentDescription = stringResource(R.string.mines),
+                            tint = textColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            "${vm.getRemainingMines()}/${vm.gameConfig.mineCount}",
+                            modifier = Modifier.padding(start = 6.dp),
+                            color = textColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_timer),
+                            contentDescription = stringResource(R.string.time),
+                            tint = textColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            vm.getElapsedTimeFormatted(),
+                            modifier = Modifier.padding(start = 6.dp),
+                            color = textColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_moves),
+                            contentDescription = stringResource(R.string.moves),
+                            tint = textColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            vm.stats.totalMoves.toString(),
+                            modifier = Modifier.padding(start = 6.dp),
+                            color = textColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             },
             actions = {
