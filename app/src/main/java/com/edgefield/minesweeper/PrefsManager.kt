@@ -25,9 +25,9 @@ object PrefsManager {
         val gridTypeName = prefs.getString("gridType", GridType.SQUARE.name) ?: GridType.SQUARE.name
         val gridType = GridType.valueOf(gridTypeName)
         val edgeMode = prefs.getBoolean("edgeMode", true)
-        val singleTap = prefs.getString("singleTap", TouchAction.MARK_CYCLE.name) ?: TouchAction.MARK_CYCLE.name
+        val singleTap = prefs.getString("singleTap", TouchAction.REVEAL.name) ?: TouchAction.REVEAL.name
         val doubleTap = prefs.getString("doubleTap", TouchAction.FLAG.name) ?: TouchAction.FLAG.name
-        val tripleTap = prefs.getString("tripleTap", TouchAction.REVEAL.name) ?: TouchAction.REVEAL.name
+        val tripleTap = prefs.getString("tripleTap", TouchAction.MARK_CYCLE.name) ?: TouchAction.MARK_CYCLE.name
         val longPress = prefs.getString("longPress", TouchAction.NONE.name) ?: TouchAction.NONE.name
         val touchConfig = TouchConfig(
             singleTap = TouchAction.valueOf(singleTap),
