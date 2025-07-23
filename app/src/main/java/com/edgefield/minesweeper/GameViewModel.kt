@@ -65,12 +65,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun handleTouch(cell: Cell, action: TouchAction) {
+        val boardCell = engine.board.getCell(cell.id) ?: return
         if (engine.isFirstClick) {
-            reveal(cell)
+            reveal(boardCell)
         } else {
             when (action) {
-                TouchAction.REVEAL -> reveal(cell)
-                TouchAction.FLAG, TouchAction.QUESTION, TouchAction.MARK_CYCLE -> toggleFlag(cell)
+                TouchAction.REVEAL -> reveal(boardCell)
+                TouchAction.FLAG, TouchAction.QUESTION, TouchAction.MARK_CYCLE -> toggleFlag(boardCell)
                 TouchAction.NONE -> { /* Do nothing */ }
             }
         }
@@ -78,12 +79,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun reveal(cell: Cell) {
-        gameState = engine.reveal(cell)
+        gameState = engine.revealCell(cell.id)
     }
 
     private fun toggleFlag(cell: Cell) {
-        val newFlag = !cell.isFlagged
-        engine.toggleMark(cell, newFlag)
+        engine.board.getCell(cell.id)?.let { boardCell ->
+            val newFlag = !boardCell.isFlagged
+            engine.toggleMark(boardCell, newFlag)
+        }
     }
     
     fun processMarkedTiles() {
