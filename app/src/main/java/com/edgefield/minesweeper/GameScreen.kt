@@ -2,7 +2,8 @@ package com.edgefield.minesweeper
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -335,6 +336,10 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
     
     var scale by remember { mutableStateOf(1f) }
     var pan by remember { mutableStateOf(Offset.Zero) }
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        scale = (scale * zoomChange).coerceIn(0.5f, 5f)
+        pan += panChange
+    }
 
     Box(
         modifier = Modifier
@@ -349,14 +354,7 @@ private fun GameBoard(vm: GameViewModel, tileSize: androidx.compose.ui.unit.Dp) 
                 scaleY = scale
                 clip = false
             }
-            .pointerInput(Unit) {
-                detectTransformGestures { centroid, panChange, zoom, _ ->
-                    val oldScale = scale
-                    scale = (scale * zoom).coerceIn(0.5f, 5f)
-                    val scaleDiff = scale / oldScale
-                    pan += panChange + (centroid - pan) * (1 - scaleDiff)
-                }
-            }
+            .transformable(transformState)
     ) {
         val coroutineScope = rememberCoroutineScope()
         var waitingForTriple by remember { mutableStateOf(false) }
