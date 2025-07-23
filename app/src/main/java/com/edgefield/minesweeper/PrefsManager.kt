@@ -67,7 +67,7 @@ object PrefsManager {
     fun saveGameState(context: Context, state: EngineState) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putString(KEY_BOARD, serializeBoard(state.board))
+            .putString(KEY_BOARD, serializeCells(state.cells))
             .putString(KEY_STATE, state.gameState.name)
             .putBoolean(KEY_FIRST_CLICK, state.firstClick)
             .putLong(KEY_START_TIME, state.stats.startTime)
@@ -81,8 +81,8 @@ object PrefsManager {
     fun loadGameState(context: Context, config: GameConfig): EngineState? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val boardData = prefs.getString(KEY_BOARD, null) ?: return null
-        val board = deserializeBoard(boardData)
-        if (board.size != config.rows || board[0].size != config.cols) return null
+        val cells = deserializeCells(boardData)
+        if (cells.size != config.rows * config.cols) return null
         val stats = GameStats(
             startTime = prefs.getLong(KEY_START_TIME, System.currentTimeMillis()),
             endTime = prefs.getLong(KEY_END_TIME, -1L).let { if (it == -1L) null else it },
@@ -92,7 +92,7 @@ object PrefsManager {
         )
         val gameState = GameState.valueOf(prefs.getString(KEY_STATE, GameState.PLAYING.name)!!)
         val firstClick = prefs.getBoolean(KEY_FIRST_CLICK, true)
-        return EngineState(board, gameState, firstClick, stats)
+        return EngineState(cells, gameState, firstClick, stats)
     }
 
     fun clearGameState(context: Context) {
@@ -109,37 +109,27 @@ object PrefsManager {
             .apply()
     }
 
-    private fun serializeBoard(board: Array<Array<Tile>>): String {
-        return buildString {
-            append(board.size).append(',').append(board[0].size).append('|')
-            board.forEach { row ->
-                row.forEach { tile ->
-                    append(if (tile.hasMine) '1' else '0').append(':')
-                    append(if (tile.revealed) '1' else '0').append(':')
-                    append(tile.mark.ordinal).append(':')
-                    append(tile.adjMines).append(';')
-                }
-                append('|')
-            }
+    private fun serializeCells(cells: List<CellState>): String {
+        return cells.joinToString("|") { cell ->
+            listOf(
+                cell.id,
+                if (cell.isMine) "1" else "0",
+                if (cell.isRevealed) "1" else "0",
+                if (cell.isFlagged) "1" else "0"
+            ).joinToString(",")
         }
     }
 
-    private fun deserializeBoard(data: String): Array<Array<Tile>> {
-        val parts = data.split('|')
-        val dims = parts[0].split(',')
-        val rows = dims[0].toInt()
-        val cols = dims[1].toInt()
-        val board = Array(rows) { r -> Array(cols) { c -> Tile(c, r) } }
-        parts.drop(1).filter { it.isNotEmpty() }.forEachIndexed { r, row ->
-            row.split(';').filter { it.isNotEmpty() }.forEachIndexed { c, tile ->
-                val vals = tile.split(':')
-                val t = board[r][c]
-                t.hasMine = vals[0] == "1"
-                t.revealed = vals[1] == "1"
-                t.mark = Mark.values()[vals[2].toInt()]
-                t.adjMines = vals[3].toInt()
-            }
+    private fun deserializeCells(data: String): List<CellState> {
+        if (data.isBlank()) return emptyList()
+        return data.split('|').map { entry ->
+            val parts = entry.split(',')
+            CellState(
+                id = parts[0],
+                isMine = parts.getOrNull(1) == "1",
+                isRevealed = parts.getOrNull(2) == "1",
+                isFlagged = parts.getOrNull(3) == "1"
+            )
         }
-        return board
     }
 }

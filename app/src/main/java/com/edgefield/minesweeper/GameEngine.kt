@@ -3,25 +3,12 @@ package com.edgefield.minesweeper
 
 import android.util.Log
 import kotlin.random.Random
-import kotlin.math.sqrt
-
-// Mapping helper
-import com.edgefield.minesweeper.mapTilesToFaces
+import com.edgefield.minesweeper.graph.Cell
+import com.edgefield.minesweeper.graph.GameBoard
 
 class GameEngine(private val config: GameConfig) {
-
-    private val squareOffsets = listOf(
-        -1 to 0, 1 to 0, 0 to -1, 0 to 1,
-        -1 to -1, -1 to 1, 1 to -1, 1 to 1
-    )
-
-    private val triangleOffsets = listOf(
-        -1 to 0, 1 to 0, 0 to 1, 0 to -1
-    )
     
-    val board: Array<Array<Tile>> = Array(config.rows) { r ->
-        Array(config.cols) { c -> Tile(c, r) }
-    }
+    val board = GameBoard()
     
     // Grid topology using GridSystem
     private val tiling = GridFactory.build(
@@ -30,18 +17,41 @@ class GameEngine(private val config: GameConfig) {
         h = config.rows
     )
     
-    // Map between tiles and faces - using a more robust approach
-    private val tileToFace = mutableMapOf<Tile, Face>()
-    private val faceToTile = mutableMapOf<Face, Tile>()
     
     var gameState: GameState = GameState.PLAYING
         private set
     
     val stats = GameStats()
 
-    private lateinit var directionOffsets: List<Pair<Int, Int>>
-    private lateinit var hexEvenOffsets: List<Pair<Int, Int>>
-    private lateinit var hexOddOffsets: List<Pair<Int, Int>>
+    private fun buildBoard() {
+        var index = 0
+        for (y in 0 until config.rows) {
+            for (x in 0 until config.cols) {
+                val face = tiling.faces[index++]
+                val verts = mutableSetOf<String>()
+                var e = face.any
+                do {
+                    val key = e.origin.key
+                    verts.add("${key.x}_${key.y}")
+                    e = e.next
+                } while (e !== face.any)
+                board.addCell(Cell(id = "${x}_${y}", vertices = verts))
+            }
+        }
+    }
+
+    private fun seedMines() {
+        val cells = board.cells.values.toList()
+        var placed = 0
+        while (placed < config.mineCount) {
+            val cell = cells.random()
+            if (!cell.isMine) {
+                cell.isMine = true
+                placed++
+            }
+        }
+    }
+
     
     init {
         Log.d("GameEngine", "Initializing GameEngine with config: rows=${config.rows}, cols=${config.cols}, mines=${config.mineCount}, gridType=${config.gridType}")
@@ -50,20 +60,12 @@ class GameEngine(private val config: GameConfig) {
             // Tiling is already created above
             Log.d("GameEngine", "Tiling created with ${tiling.faces.size} faces")
             
-            Log.d("GameEngine", "Initializing tile-to-face mapping...")
-            initializeTileToFaceMapping()
-            if (config.gridType.kind == GridKind.HEXAGON) {
-                val (evenOffs, oddOffs) = computeHexParityOffsets()
-                hexEvenOffsets = evenOffs
-                hexOddOffsets = oddOffs
-                directionOffsets = evenOffs
-            } else {
-                directionOffsets = computeDirectionOffsets()
-            }
-            Log.d("GameEngine", "Tile-to-face mapping complete")
-            
-            Log.d("GameEngine", "Seeding mines and numbers...")
-            seedMinesAndNumbers()
+            Log.d("GameEngine", "Building board graph...")
+            buildBoard()
+            Log.d("GameEngine", "Board built")
+
+            Log.d("GameEngine", "Seeding mines...")
+            seedMines()
             Log.d("GameEngine", "GameEngine initialization complete")
         } catch (e: Exception) {
             Log.e("GameEngine", "Error initializing GameEngine", e)
@@ -71,78 +73,7 @@ class GameEngine(private val config: GameConfig) {
         }
     }
     
-    private fun initializeTileToFaceMapping() {
-        val (tToF, fToT) = mapTilesToFaces(board.flatten(), tiling.faces)
-        tileToFace.putAll(tToF)
-        faceToTile.putAll(fToT)
-    }
 
-    private fun recalculateAdjacents() {
-        board.flatten().forEach { tile ->
-            tile.adjMines = neighbors(tile).count { it.hasMine }
-        }
-    }
-
-    private fun seedMinesAndNumbers() {
-        var placed = 0
-        while (placed < config.mineCount) {
-            val r = Random.nextInt(config.rows)
-            val c = Random.nextInt(config.cols)
-            val t = board[r][c]
-            if (!t.hasMine) {
-                t.hasMine = true
-                placed++
-            }
-        }
-        recalculateAdjacents()
-    }
-
-    private fun computeDirectionOffsets(): List<Pair<Int, Int>> {
-        val expected = config.gridType.kind.neighborCount
-        board.flatten().forEach { tile ->
-            val face = tileToFace[tile] ?: return@forEach
-            val neighbors = tiling.neighbours(face).mapNotNull { nf ->
-                faceToTile[nf]
-            }
-            if (neighbors.size == expected) {
-                return neighbors.map { it.x - tile.x to it.y - tile.y }
-            }
-        }
-        // Fallback to generic offsets based on grid type
-        return when (config.gridType.kind) {
-            GridKind.SQUARE -> squareOffsets
-            GridKind.TRIANGLE -> triangleOffsets
-            else -> {
-                val first = board[0][0]
-                val face = tileToFace[first] ?: return emptyList()
-                tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
-                    .map { it.x - first.x to it.y - first.y }
-            }
-        }
-    }
-
-    private fun computeHexParityOffsets(): Pair<List<Pair<Int, Int>>, List<Pair<Int, Int>>> {
-        val expected = GridKind.HEXAGON.neighborCount
-        var even: List<Pair<Int, Int>>? = null
-        var odd: List<Pair<Int, Int>>? = null
-        board.flatten().forEach { tile ->
-            val face = tileToFace[tile] ?: return@forEach
-            val neighbors = tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
-            if (neighbors.size == expected) {
-                val offs = neighbors.map { it.x - tile.x to it.y - tile.y }
-                if (tile.x % 2 == 0 && even == null) even = offs
-                if (tile.x % 2 == 1 && odd == null) odd = offs
-                if (even != null && odd != null) return even!! to odd!!
-            }
-        }
-        val first = board[0][0]
-        val face = tileToFace[first] ?: return emptyList<Pair<Int, Int>>() to emptyList()
-        val fallback = tiling.neighbours(face).mapNotNull { nf -> faceToTile[nf] }
-            .map { it.x - first.x to it.y - first.y }
-        if (even == null) even = fallback
-        if (odd == null) odd = fallback
-        return even!! to odd!!
-    }
 
     private var firstClick = true
     val isFirstClick: Boolean
@@ -153,46 +84,44 @@ class GameEngine(private val config: GameConfig) {
      * adjacent mines, adjacent tiles are automatically revealed in a
      * breadth-first manner.
      */
-    fun revealTile(x: Int, y: Int, countMove: Boolean = true): GameState {
-        if (y !in board.indices) return gameState
-        val row = board[y]
-        if (x !in row.indices) return gameState
-        return reveal(row[x], countMove)
+    fun revealCell(id: String, countMove: Boolean = true): GameState {
+        val cell = board.getCell(id) ?: return gameState
+        return reveal(cell, countMove)
     }
-    
-    fun reveal(tile: Tile, countMove: Boolean = true): GameState {
-        if (gameState != GameState.PLAYING || tile.revealed || tile.mark == Mark.FLAG) return gameState
+
+    fun reveal(cell: Cell, countMove: Boolean = true): GameState {
+        if (gameState != GameState.PLAYING || cell.isRevealed || cell.isFlagged) return gameState
 
         // First click should always be safe
         if (firstClick) {
             firstClick = false
-            ensureSafeFirstClick(tile)
+            ensureSafeFirstClick(cell)
         }
 
         // Breadth-first flood fill starting from the clicked tile
-        val queue = ArrayDeque<Tile>()
-        queue += tile
+        val queue = ArrayDeque<Cell>()
+        queue += cell
         var counted = false
 
         while (queue.isNotEmpty()) {
             val current = queue.removeFirst()
-            if (current.revealed || current.mark == Mark.FLAG) continue
+            if (current.isRevealed || current.isFlagged) continue
 
-            current.revealed = true
+            current.isRevealed = true
             if (countMove && !counted) {
                 stats.totalMoves++
                 counted = true
             }
 
-            if (current.hasMine) {
+            if (current.isMine) {
                 gameState = GameState.LOST
                 stats.endTime = System.currentTimeMillis()
                 return gameState
             }
 
-            if (current.adjMines == 0) {
+            if (board.countNeighborMines(current.id) == 0) {
                 neighbors(current).forEach { neighbor ->
-                    if (!neighbor.revealed && neighbor.mark != Mark.FLAG) {
+                    if (!neighbor.isRevealed && !neighbor.isFlagged) {
                         queue += neighbor
                     }
                 }
@@ -202,43 +131,30 @@ class GameEngine(private val config: GameConfig) {
         return checkWinCondition()
     }
     
-    private fun ensureSafeFirstClick(firstTile: Tile) {
-        if (firstTile.hasMine) {
-            // Move the mine to a different location
-            firstTile.hasMine = false
-            
-            // Find a new location for the mine
-            var placed = false
-            while (!placed) {
-                val r = Random.nextInt(config.rows)
-                val c = Random.nextInt(config.cols)
-                val candidate = board[r][c]
-                if (!candidate.hasMine && candidate != firstTile) {
-                    candidate.hasMine = true
-                    placed = true
-                }
+    private fun ensureSafeFirstClick(firstCell: Cell) {
+        if (firstCell.isMine) {
+            firstCell.isMine = false
+            val candidates = board.cells.values.filter { it.id != firstCell.id && !it.isMine }
+            if (candidates.isNotEmpty()) {
+                candidates.random().isMine = true
             }
-            
-            // Recalculate adjacent mine counts
-            recalculateAdjacents()
         }
     }
 
-    fun toggleMark(tile: Tile, mark: Mark) {
-        if (gameState != GameState.PLAYING || tile.revealed) return
-        
-        val oldMark = tile.mark
-        tile.mark = mark
-        
-        // Update mine tracking
+    fun toggleMark(cell: Cell, flagged: Boolean) {
+        if (gameState != GameState.PLAYING || cell.isRevealed) return
+
+        val wasFlagged = cell.isFlagged
+        cell.isFlagged = flagged
+
         when {
-            oldMark != Mark.FLAG && mark == Mark.FLAG -> stats.minesFound++
-            oldMark == Mark.FLAG && mark != Mark.FLAG -> stats.minesFound--
+            !wasFlagged && flagged -> stats.minesFound++
+            wasFlagged && !flagged -> stats.minesFound--
         }
     }
-    
+
     fun processMarkedTiles(): Int {
-        val toReveal = board.flatten().filter { it.mark == Mark.QUESTION && !it.revealed }
+        val toReveal = board.cells.values.filter { it.isFlagged && !it.isRevealed }
         toReveal.forEach { reveal(it, countMove = false) }
         if (toReveal.isNotEmpty()) {
             stats.processCount++
@@ -248,8 +164,8 @@ class GameEngine(private val config: GameConfig) {
     }
 
     private fun checkWinCondition(): GameState {
-        val allSafeCellsRevealed = board.flatten().all { tile ->
-            tile.hasMine || tile.revealed
+        val allSafeCellsRevealed = board.cells.values.all { cell ->
+            cell.isMine || cell.isRevealed
         }
         
         if (allSafeCellsRevealed) {
@@ -260,63 +176,23 @@ class GameEngine(private val config: GameConfig) {
         return gameState
     }
 
-    fun getFlagCount(): Int = board.flatten().count { it.mark == Mark.FLAG }
+    fun getFlagCount(): Int = board.cells.values.count { it.isFlagged }
     
     fun getRemainingMines(): Int = config.mineCount - getFlagCount()
 
-    private fun neighbors(tile: Tile): List<Tile> {
-        // Base neighbours via GridSystem topology
-        val face = tileToFace[tile] ?: return emptyList()
-        val adjacent = tiling.neighbours(face).mapNotNull { neighborFace ->
-            faceToTile[neighborFace]
-        }.toMutableList()
-        if (config.edgeMode && ::directionOffsets.isInitialized) {
-            val seen = adjacent.toMutableSet()
-            val offsets = when (config.gridType.kind) {
-                GridKind.TRIANGLE -> {
-                    if ((tile.x + tile.y) % 2 == 0) {
-                        listOf(-1 to 0, 1 to 0, 0 to 1)
-                    } else {
-                        listOf(-1 to 0, 1 to 0, 0 to -1)
-                    }
-                }
-                GridKind.SQUARE -> squareOffsets
-                GridKind.HEXAGON -> if (tile.x % 2 == 0) hexEvenOffsets else hexOddOffsets
-                else -> directionOffsets
-            }
-            offsets.forEach { (dx, dy) ->
-                var nx = tile.x + dx
-                var ny = tile.y + dy
-                if (config.gridType.kind == GridKind.TRIANGLE && config.rows % 2 == 1) {
-                    val up = (tile.x + tile.y) % 2 == 0
-                    if (ny < 0 && !up && dy == -1) nx -= 1
-                    else if (ny >= config.rows && up && dy == 1) nx += 1
-                }
-                val (wx, wy) = wrapCoord(nx, ny)
-                val neighbor = board[wy][wx]
-                if (neighbor !== tile && seen.add(neighbor)) {
-                    adjacent += neighbor
-                }
-            }
-        }
-        return adjacent
-    }
-
-    private fun wrapCoord(x: Int, y: Int): Pair<Int, Int> {
-        val wx = ((x % config.cols) + config.cols) % config.cols
-        val wy = ((y % config.rows) + config.rows) % config.rows
-        return wx to wy
-    }
+    private fun neighbors(cell: Cell): List<Cell> = board.getNeighbors(cell.id).toList()
 
     fun exportState(): EngineState {
-        val boardCopy = Array(board.size) { r ->
-            Array(board[r].size) { c ->
-                val t = board[r][c]
-                Tile(t.x, t.y, t.hasMine, t.revealed, t.mark, t.adjMines)
-            }
+        val cells = board.cells.values.map { cell ->
+            CellState(
+                id = cell.id,
+                isMine = cell.isMine,
+                isRevealed = cell.isRevealed,
+                isFlagged = cell.isFlagged
+            )
         }
         return EngineState(
-            board = boardCopy,
+            cells = cells,
             gameState = gameState,
             firstClick = firstClick,
             stats = stats.copy()
@@ -324,18 +200,11 @@ class GameEngine(private val config: GameConfig) {
     }
 
     fun loadState(state: EngineState) {
-        require(state.board.size == config.rows &&
-            state.board[0].size == config.cols) {
-            "Board size mismatch"
-        }
-        for (y in board.indices) {
-            for (x in board[y].indices) {
-                val src = state.board[y][x]
-                val dst = board[y][x]
-                dst.hasMine = src.hasMine
-                dst.revealed = src.revealed
-                dst.mark = src.mark
-                dst.adjMines = src.adjMines
+        state.cells.forEach { cs ->
+            board.getCell(cs.id)?.let { cell ->
+                cell.isMine = cs.isMine
+                cell.isRevealed = cs.isRevealed
+                cell.isFlagged = cs.isFlagged
             }
         }
         firstClick = state.firstClick
