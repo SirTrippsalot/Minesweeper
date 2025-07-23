@@ -27,9 +27,9 @@ enum class TouchAction {
 }
 
 data class TouchConfig(
-    val singleTap: TouchAction = TouchAction.MARK_CYCLE,
+    val singleTap: TouchAction = TouchAction.REVEAL,
     val doubleTap: TouchAction = TouchAction.FLAG,
-    val tripleTap: TouchAction = TouchAction.REVEAL,
+    val tripleTap: TouchAction = TouchAction.MARK_CYCLE,
     val longPress: TouchAction = TouchAction.NONE
 )
 
