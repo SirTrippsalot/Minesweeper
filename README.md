@@ -37,3 +37,15 @@ You can also open the project in Android Studio and run it directly from the IDE
 ### Selecting a Grid Type
 
 Open the Settings screen and pick one of the available tilings. Wrapping options can be toggled per edge. Penrose grids do not support wrapping.
+
+## Graph Board Builders
+
+The `graph` package includes simple utilities for creating boards programmatically.
+
+```kotlin
+val square = graph.buildSquareBoard(cols = 5, rows = 5)
+val triangle = graph.buildTriangleBoard(4, 4)
+val mixed = graph.buildMixedDemoBoard()
+```
+
+Cells are addressed by vertex IDs like `"2_3"`. Use `getCell(id)` to retrieve a cell and inspect its neighbors.
