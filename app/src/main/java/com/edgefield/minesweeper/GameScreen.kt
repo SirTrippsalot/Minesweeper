@@ -765,14 +765,14 @@ private fun SettingsDialog(
                     ConfigNumberField(
                         label = "Rows",
                         value = tempConfig.rows,
-                        onValueChange = { tempConfig = tempConfig.copy(rows = it.coerceIn(5, 20)) },
+                        onValueChange = { tempConfig = tempConfig.copy(rows = it) },
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ConfigNumberField(
                         label = "Cols",
                         value = tempConfig.cols,
-                        onValueChange = { tempConfig = tempConfig.copy(cols = it.coerceIn(5, 20)) },
+                        onValueChange = { tempConfig = tempConfig.copy(cols = it) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -838,7 +838,11 @@ private fun SettingsDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfigChange(tempConfig)
+                    val clamped = tempConfig.copy(
+                        rows = tempConfig.rows.coerceIn(5, 100),
+                        cols = tempConfig.cols.coerceIn(5, 100)
+                    )
+                    onConfigChange(clamped)
                     onDismiss()
                 }
             ) {
