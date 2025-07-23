@@ -36,8 +36,8 @@ You can also open the project in Android Studio and run it directly from the IDE
 
 ### Touch Controls
 
-By default you reveal a tile with a single tap and flag it with a double tap.
-Triple tap cycles marks on a tile. Long press does nothing.
+By default a single tap marks a tile with a question mark and a double tap flags it.
+Triple tap reveals the tile. Long press does nothing.
 
 ### Selecting a Grid Type
 
