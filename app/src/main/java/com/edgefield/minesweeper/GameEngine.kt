@@ -134,20 +134,38 @@ class GameEngine(private val config: GameConfig) {
         }
     }
 
-    fun toggleMark(cell: Cell, flagged: Boolean) {
+    fun toggleFlag(cell: Cell) {
         if (gameState != GameState.PLAYING || cell.isRevealed) return
 
         val wasFlagged = cell.isFlagged
-        cell.isFlagged = flagged
+        cell.isFlagged = !wasFlagged
 
+        if (wasFlagged) stats.minesFound-- else stats.minesFound++
+    }
+
+    fun toggleMark(cell: Cell) {
+        if (gameState != GameState.PLAYING || cell.isRevealed) return
+        cell.isMarked = !cell.isMarked
+    }
+
+    fun cycleMark(cell: Cell) {
+        if (gameState != GameState.PLAYING || cell.isRevealed) return
         when {
-            !wasFlagged && flagged -> stats.minesFound++
-            wasFlagged && !flagged -> stats.minesFound--
+            cell.isMarked -> {
+                cell.isMarked = false
+                cell.isFlagged = true
+                stats.minesFound++
+            }
+            cell.isFlagged -> {
+                cell.isFlagged = false
+                stats.minesFound--
+            }
+            else -> cell.isMarked = true
         }
     }
 
     fun processMarkedTiles(): Int {
-        val toReveal = board.cells.values.filter { it.isFlagged && !it.isRevealed }
+        val toReveal = board.cells.values.filter { it.isMarked && !it.isRevealed }
         toReveal.forEach { reveal(it, countMove = false) }
         if (toReveal.isNotEmpty()) {
             stats.processCount++
@@ -181,7 +199,8 @@ class GameEngine(private val config: GameConfig) {
                 id = cell.id,
                 isMine = cell.isMine,
                 isRevealed = cell.isRevealed,
-                isFlagged = cell.isFlagged
+                isFlagged = cell.isFlagged,
+                isMarked = cell.isMarked
             )
         }
         return EngineState(
@@ -198,6 +217,7 @@ class GameEngine(private val config: GameConfig) {
                 cell.isMine = cs.isMine
                 cell.isRevealed = cs.isRevealed
                 cell.isFlagged = cs.isFlagged
+                cell.isMarked = cs.isMarked
             }
         }
         firstClick = state.firstClick

@@ -115,7 +115,8 @@ object PrefsManager {
                 cell.id,
                 if (cell.isMine) "1" else "0",
                 if (cell.isRevealed) "1" else "0",
-                if (cell.isFlagged) "1" else "0"
+                if (cell.isFlagged) "1" else "0",
+                if (cell.isMarked) "1" else "0"
             ).joinToString(",")
         }
     }
@@ -128,7 +129,8 @@ object PrefsManager {
                 id = parts[0],
                 isMine = parts.getOrNull(1) == "1",
                 isRevealed = parts.getOrNull(2) == "1",
-                isFlagged = parts.getOrNull(3) == "1"
+                isFlagged = parts.getOrNull(3) == "1",
+                isMarked = parts.getOrNull(4) == "1"
             )
         }
     }

@@ -71,7 +71,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             when (action) {
                 TouchAction.REVEAL -> reveal(boardCell)
-                TouchAction.FLAG, TouchAction.QUESTION, TouchAction.MARK_CYCLE -> toggleFlag(boardCell)
+                TouchAction.FLAG -> toggleFlag(boardCell)
+                TouchAction.QUESTION -> toggleMark(boardCell)
+                TouchAction.MARK_CYCLE -> cycleMark(boardCell)
                 TouchAction.NONE -> { /* Do nothing */ }
             }
         }
@@ -84,8 +86,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun toggleFlag(cell: Cell) {
         engine.board.getCell(cell.id)?.let { boardCell ->
-            val newFlag = !boardCell.isFlagged
-            engine.toggleMark(boardCell, newFlag)
+            engine.toggleFlag(boardCell)
+        }
+    }
+
+    private fun toggleMark(cell: Cell) {
+        engine.board.getCell(cell.id)?.let { boardCell ->
+            engine.toggleMark(boardCell)
+        }
+    }
+
+    private fun cycleMark(cell: Cell) {
+        engine.board.getCell(cell.id)?.let { boardCell ->
+            engine.cycleMark(boardCell)
         }
     }
     
@@ -152,7 +165,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 vertices = cell.vertices.toSet(),
                 isMine = cell.isMine,
                 isRevealed = cell.isRevealed,
-                isFlagged = cell.isFlagged
+                isFlagged = cell.isFlagged,
+                isMarked = cell.isMarked
             )
             copy.addCell(newCell)
         }
