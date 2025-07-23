@@ -28,14 +28,7 @@ class GameEngine(private val config: GameConfig) {
         for (y in 0 until config.rows) {
             for (x in 0 until config.cols) {
                 val face = tiling.faces[index++]
-                val verts = mutableSetOf<String>()
-                var e = face.any
-                do {
-                    val key = e.origin.key
-                    verts.add("${key.x}_${key.y}")
-                    e = e.next
-                } while (e !== face.any)
-                board.addCell(Cell(id = "${x}_${y}", vertices = verts))
+                board.addCell(face.toCell("${x}_${y}"))
             }
         }
     }
