@@ -40,12 +40,32 @@ Open the Settings screen and pick one of the available tilings. Wrapping options
 
 ## Graph Board Builders
 
-The `graph` package includes simple utilities for creating boards programmatically.
+The `graph` package exposes a minimal API for building boards without the UI.
+
+`Cell` represents a single tile and stores links to neighboring cells. A
+`GameBoard` is simply a collection of `Cell` objects with helper methods for
+adding cells and connecting them. Cells are looked up by string IDs such as
+`"2_3"`.
+
+The builders create common layouts for you:
 
 ```kotlin
 val square = graph.buildSquareBoard(cols = 5, rows = 5)
-val triangle = graph.buildTriangleBoard(4, 4)
+val triangle = graph.buildTriangleBoard(rows = 4, cols = 4)
 val mixed = graph.buildMixedDemoBoard()
 ```
 
-Cells are addressed by vertex IDs like `"2_3"`. Use `getCell(id)` to retrieve a cell and inspect its neighbors.
+You can also make custom boards by instantiating `GameBoard` directly and
+connecting cells yourself. The builders can be combined to create mixed tilings;
+`buildMixedDemoBoard()` shows how squares and triangles can share edges.
+
+```kotlin
+val board = GameBoard().apply {
+    addCell(Cell("0_0"))
+    addCell(Cell("1_0"))
+    connect("0_0", "1_0")
+}
+val cell = board.getCell("0_0")
+println(cell?.neighbors?.map { it.id })
+```
+
