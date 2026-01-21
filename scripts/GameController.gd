@@ -24,6 +24,7 @@ var grid_data: GridData
 var grid_generator: GridGenerator
 var grid_renderer: GridRenderer
 var game_camera: Camera2D
+var game_logic: GameLogic
 
 func _ready():
 	print("\n=== Game Controller Starting ===\n")
@@ -37,10 +38,15 @@ func _ready():
 	# Set up renderer
 	_setup_renderer()
 
+	# Set up game logic
+	_setup_game_logic()
+
 	print("\n=== Game Ready! ===")
 	print("Grid: %dx%d with %d mines" % [grid_width, grid_height, mine_count])
 	print("Total cells: %d" % grid_data.cell_count)
 	print("\nControls:")
+	print("  - Left Click: Reveal cell")
+	print("  - Right Click: Flag/unflag cell")
 	print("  - Mouse Wheel: Zoom in/out")
 	print("  - Middle Mouse Drag: Pan camera")
 	print("  - Arrow Keys: Pan camera\n")
@@ -82,6 +88,14 @@ func _setup_renderer() -> void:
 
 	print("✓ Renderer ready")
 
+func _setup_game_logic() -> void:
+	print("Setting up game logic...")
+
+	game_logic = GameLogic.new()
+	game_logic.initialize(grid_data, grid_generator)
+
+	print("✓ Game logic ready")
+
 func _setup_camera() -> void:
 	print("Setting up camera...")
 
@@ -122,12 +136,21 @@ func _unhandled_input(event):
 	if not game_camera:
 		return
 
-	# Mouse wheel zoom
+	# Mouse button events
 	if event is InputEventMouseButton:
+		# Mouse wheel zoom
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			_zoom_camera(1.1)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
 			_zoom_camera(0.9)
+
+		# Left click - reveal cell
+		elif event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			_handle_cell_click(event.position, false)
+
+		# Right click - flag cell
+		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+			_handle_cell_click(event.position, true)
 
 	# Middle mouse drag panning
 	if event is InputEventMouseMotion:
@@ -153,3 +176,33 @@ func _center_camera_on_grid() -> void:
 
 	game_camera.position = center
 	print("Camera centered at: %s" % center)
+
+## Handle cell click (reveal or flag)
+func _handle_cell_click(screen_pos: Vector2, is_right_click: bool) -> void:
+	if not game_logic or not grid_renderer:
+		return
+
+	# Convert screen position to world position
+	var world_pos = game_camera.get_global_mouse_position()
+
+	# Get cell at this position
+	var cell_id = grid_renderer.get_cell_at_position(world_pos)
+	if cell_id < 0:
+		return  # Clicked outside grid
+
+	# Handle right click (flagging)
+	if is_right_click:
+		if game_logic.toggle_flag(cell_id):
+			grid_renderer.mark_cell_dirty(cell_id)
+			grid_renderer.update_dirty_cells()
+		return
+
+	# Handle left click (reveal)
+	var revealed_cells = game_logic.reveal_cell(cell_id)
+	if revealed_cells.size() > 0:
+		grid_renderer.mark_cells_dirty(revealed_cells)
+		grid_renderer.update_dirty_cells()
+
+		# Print flood fill results
+		if revealed_cells.size() > 1:
+			print("Revealed %d cells via flood fill" % revealed_cells.size())
