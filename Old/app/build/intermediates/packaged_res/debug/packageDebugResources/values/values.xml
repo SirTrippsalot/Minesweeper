@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="island_sand">#F5EBDD</color>
+    <color name="island_text">#2C3E50</color>
+    <string name="app_name">Minesweeper Edgelord</string>
+    <string name="mines">Mines</string>
+    <string name="moves">Moves</string>
+    <string name="time">Time</string>
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar"/>
+</resources>

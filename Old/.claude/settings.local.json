@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.gradlew.bat assembleDebug)",
+      "Bash(gradlew.bat assembleDebug:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(cmd.exe /c gradlew.bat assembleDebug)",
+      "Bash(cmd.exe:*)",
+      "Bash(Select-String -Pattern \"BUILD|error:|e: file\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"& {.\\\\gradlew.bat assembleDebug 2>&1 | Select-String -Pattern ''BUILD|error|e: file'' | Select-Object -First 20}\")",
+      "Bash(powershell -Command \"& {.\\\\gradlew.bat assembleDebug 2>&1 | Select-String -Pattern ''BUILD|error|e: file'' | Select-Object -First 15}\")"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.edgefield.minesweeper.app-debug-4:/drawable_ic_moves.xml.flat",
+        "source": "com.edgefield.minesweeper.app-main-6:/drawable/ic_moves.xml"
+    },
+    {
+        "merged": "com.edgefield.minesweeper.app-debug-4:/layout_top_menu.xml.flat",
+        "source": "com.edgefield.minesweeper.app-main-6:/layout/top_menu.xml"
+    },
+    {
+        "merged": "com.edgefield.minesweeper.app-debug-4:/drawable_ic_timer.xml.flat",
+        "source": "com.edgefield.minesweeper.app-main-6:/drawable/ic_timer.xml"
+    },
+    {
+        "merged": "com.edgefield.minesweeper.app-debug-4:/drawable_ic_mine.xml.flat",
+        "source": "com.edgefield.minesweeper.app-main-6:/drawable/ic_mine.xml"
+    },
+    {
+        "merged": "com.edgefield.minesweeper.app-debug-4:/xml_data_extraction_rules.xml.flat",
+        "source": "com.edgefield.minesweeper.app-main-6:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.edgefield.minesweeper.app-debug-4:/xml_backup_rules.xml.flat",
+        "source": "com.edgefield.minesweeper.app-main-6:/xml/backup_rules.xml"
+    }
+]

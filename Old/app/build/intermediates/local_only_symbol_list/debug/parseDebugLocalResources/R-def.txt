@@ -1,0 +1,19 @@
+R_DEF: Internal format may change without notice
+local
+color island_sand
+color island_text
+drawable ic_mine
+drawable ic_moves
+drawable ic_timer
+id minesText
+id movesText
+id timeText
+id top_menu
+layout top_menu
+string app_name
+string mines
+string moves
+string time
+style AppTheme
+xml backup_rules
+xml data_extraction_rules
