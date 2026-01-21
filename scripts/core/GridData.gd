@@ -201,7 +201,7 @@ func validate_neighbors() -> bool:
 func get_debug_info() -> String:
 	return "GridData: %d cells (%s), %d mines, %d revealed" % [
 		cell_count,
-		GridType.get_name(grid_type),
+		GridType.get_type_name(grid_type),
 		count_total_mines(),
 		count_revealed()
 	]

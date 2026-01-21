@@ -19,7 +19,7 @@ enum Type {
 }
 
 ## Human-readable names for UI display
-static func get_name(type: Type) -> String:
+static func get_type_name(type: Type) -> String:
 	match type:
 		Type.SQUARE: return "Square"
 		Type.HEXAGON: return "Hexagon"

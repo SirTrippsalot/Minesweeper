@@ -5,7 +5,7 @@ func _ready():
 
 	# Test GridType enum
 	print("GridType.Type.SQUARE = ", GridType.Type.SQUARE)
-	print("GridType.get_name(GridType.Type.SQUARE) = ", GridType.get_name(GridType.Type.SQUARE))
+	print("GridType.get_type_name(GridType.Type.SQUARE) = ", GridType.get_type_name(GridType.Type.SQUARE))
 
 	# Test GridData creation
 	var grid = GridData.new()

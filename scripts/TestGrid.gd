@@ -15,7 +15,7 @@ func _ready():
 
 	if grid:
 		print("✓ Grid created successfully")
-		print("  - Type: %s" % GridType.get_name(grid.grid_type))
+		print("  - Type: %s" % GridType.get_type_name(grid.grid_type))
 		print("  - Size: %d cells" % grid.cell_count)
 		print("  - Mines: %d" % grid.count_total_mines())
 		print("  - Wrapping: H=%s V=%s" % [grid.wrap_horizontal, grid.wrap_vertical])
