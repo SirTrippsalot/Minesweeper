@@ -35,23 +35,23 @@ func _init(w: int = 20, h: int = 20, wrap_h: bool = true, wrap_v: bool = true):
 # ===== ABSTRACT METHODS (Must be overridden by subclasses) =====
 
 ## Generate a complete grid with neighbor relationships and mines
-## @param mine_count: Number of mines to place
+## @param _mine_count: Number of mines to place
 ## @return: Fully initialized GridData
-func generate(mine_count: int) -> GridData:
+func generate(_mine_count: int) -> GridData:
 	push_error("GridGenerator.generate() must be overridden by subclass")
 	return null
 
 ## Convert cell_id to pixel position for rendering
-## @param cell_id: The cell index
+## @param _cell_id: The cell index
 ## @return: World position in pixels
-func get_pixel_position(cell_id: int) -> Vector2:
+func get_pixel_position(_cell_id: int) -> Vector2:
 	push_error("GridGenerator.get_pixel_position() must be overridden by subclass")
 	return Vector2.ZERO
 
 ## Find cell_id at given world position (for click detection)
-## @param world_pos: Position in world coordinates
+## @param _world_pos: Position in world coordinates
 ## @return: cell_id, or -1 if no cell at that position
-func get_cell_at_position(world_pos: Vector2) -> int:
+func get_cell_at_position(_world_pos: Vector2) -> int:
 	push_error("GridGenerator.get_cell_at_position() must be overridden by subclass")
 	return -1
 

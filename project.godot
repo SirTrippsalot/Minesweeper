@@ -13,7 +13,7 @@ config_version=5
 config/name="Topology Sweeper"
 config/description="A premium topological minesweeper game with exotic tessellations"
 run/main_scene="res://scenes/test.tscn"
-config/features=PackedStringArray("4.3", "Forward Plus")
+config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [display]
@@ -30,4 +30,3 @@ pointing/emulate_touch_from_mouse=true
 [rendering]
 
 textures/canvas_textures/default_texture_filter=2
-renderer/rendering_method="forward_plus"

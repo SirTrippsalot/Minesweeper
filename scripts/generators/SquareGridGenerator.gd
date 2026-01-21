@@ -88,7 +88,7 @@ func _pos_to_id(pos: Vector2i) -> int:
 
 ## Convert cell_id to grid position
 func _id_to_pos(cell_id: int) -> Vector2i:
-	return Vector2i(cell_id % width, cell_id / width)
+	return Vector2i(cell_id % width, cell_id // width)
 
 ## Convert cell_id to pixel position for rendering
 func get_pixel_position(cell_id: int) -> Vector2:

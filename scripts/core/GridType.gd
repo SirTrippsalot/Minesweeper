@@ -38,7 +38,8 @@ static func supports_wrapping(type: Type) -> bool:
 
 ## Get typical neighbor count for a grid type
 ## Note: Some grids have variable neighbor counts per cell
-static func get_typical_neighbor_count(type: Type, use_vertex_neighbors: bool = false) -> int:
+## Default assumes standard Minesweeper rules (Moore/vertex neighbors for square)
+static func get_typical_neighbor_count(type: Type, use_vertex_neighbors: bool = true) -> int:
 	match type:
 		Type.SQUARE:
 			return 8 if use_vertex_neighbors else 4
