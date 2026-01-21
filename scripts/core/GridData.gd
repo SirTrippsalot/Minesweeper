@@ -12,6 +12,14 @@
 class_name GridData
 extends Resource
 
+## Cell state enumeration
+enum CellState {
+	HIDDEN = 0,     # Not yet revealed
+	REVEALED = 1,   # Revealed (shows mine or danger count)
+	FLAGGED = 2,    # Marked as mine by player
+	QUESTION = 3    # Marked with question by player
+}
+
 ## Total number of cells in the grid
 @export var cell_count: int = 0
 
@@ -57,7 +65,7 @@ func initialize(count: int) -> void:
 
 	# Fill with defaults
 	cell_is_mine.fill(0)
-	cell_state.fill(0)  # All hidden
+	cell_state.fill(CellState.HIDDEN)  # All hidden
 	cell_danger_count.fill(0)
 
 # ===== CELL QUERIES =====
@@ -72,25 +80,25 @@ func is_mine(cell_id: int) -> bool:
 func is_revealed(cell_id: int) -> bool:
 	if cell_id < 0 or cell_id >= cell_count:
 		return false
-	return cell_state[cell_id] == 1
+	return cell_state[cell_id] == CellState.REVEALED
 
 ## Check if a cell is flagged
 func is_flagged(cell_id: int) -> bool:
 	if cell_id < 0 or cell_id >= cell_count:
 		return false
-	return cell_state[cell_id] == 2
+	return cell_state[cell_id] == CellState.FLAGGED
 
 ## Check if a cell is questioned
 func is_questioned(cell_id: int) -> bool:
 	if cell_id < 0 or cell_id >= cell_count:
 		return false
-	return cell_state[cell_id] == 3
+	return cell_state[cell_id] == CellState.QUESTION
 
 ## Check if a cell is hidden (not revealed, flagged, or questioned)
 func is_hidden(cell_id: int) -> bool:
 	if cell_id < 0 or cell_id >= cell_count:
 		return false
-	return cell_state[cell_id] == 0
+	return cell_state[cell_id] == CellState.HIDDEN
 
 ## Get the neighbor IDs for a cell
 func get_neighbors(cell_id: int) -> PackedInt32Array:
@@ -112,29 +120,35 @@ func set_mine(cell_id: int, is_mine_val: bool) -> void:
 		return
 	cell_is_mine[cell_id] = 1 if is_mine_val else 0
 
+## Get the current state of a cell
+func get_state(cell_id: int) -> CellState:
+	if cell_id < 0 or cell_id >= cell_count:
+		return CellState.HIDDEN
+	return cell_state[cell_id]
+
 ## Reveal a cell
 func reveal_cell(cell_id: int) -> void:
 	if cell_id < 0 or cell_id >= cell_count:
 		return
-	cell_state[cell_id] = 1
+	cell_state[cell_id] = CellState.REVEALED
 
 ## Flag a cell as containing a mine
 func flag_cell(cell_id: int) -> void:
 	if cell_id < 0 or cell_id >= cell_count:
 		return
-	cell_state[cell_id] = 2
+	cell_state[cell_id] = CellState.FLAGGED
 
 ## Mark a cell with a question mark
 func question_cell(cell_id: int) -> void:
 	if cell_id < 0 or cell_id >= cell_count:
 		return
-	cell_state[cell_id] = 3
+	cell_state[cell_id] = CellState.QUESTION
 
 ## Clear any marking from a cell (return to hidden state)
 func clear_marking(cell_id: int) -> void:
 	if cell_id < 0 or cell_id >= cell_count:
 		return
-	cell_state[cell_id] = 0
+	cell_state[cell_id] = CellState.HIDDEN
 
 # ===== NEIGHBOR MANAGEMENT =====
 
