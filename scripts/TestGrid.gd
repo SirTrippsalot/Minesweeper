@@ -5,15 +5,12 @@
 
 extends Node
 
-# Preload the generator to ensure proper script resolution
-const SquareGridGen = preload("res://scripts/generators/SquareGridGenerator.gd")
-
 func _ready():
 	print("=== Testing Grid Data Structures ===\n")
 
 	# Test 1: Create a small square grid
 	print("Test 1: Creating 10×10 square grid with wrapping...")
-	var generator = SquareGridGen.new(10, 10, true, true)
+	var generator = SquareGridGenerator.new(10, 10, true, true)
 	var grid = generator.generate(15)  # 15 mines
 
 	if grid:
@@ -70,7 +67,7 @@ func _ready():
 
 	# Test 6: Non-wrapping grid
 	print("\nTest 6: Creating 10×10 square grid WITHOUT wrapping...")
-	var generator_no_wrap = SquareGridGen.new(10, 10, false, false)
+	var generator_no_wrap = SquareGridGenerator.new(10, 10, false, false)
 	var grid_no_wrap = generator_no_wrap.generate(15)
 
 	# Corner cells should have fewer neighbors
