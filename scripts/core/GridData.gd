@@ -51,6 +51,11 @@ var cell_danger_count: PackedByteArray
 ## This is the CORE of the graph-based architecture
 var cell_neighbors: Array[PackedInt32Array]
 
+## Pre-computed rendering data (populated during grid generation)
+## This caches geometry calculations to eliminate repeated math in hot loops
+var cell_positions: PackedVector2Array  ## Pixel coordinates (center of each cell)
+var cell_rotations: PackedByteArray     ## Rotation flags (0 = 0°, 1 = 180°)
+
 # ===== INITIALIZATION =====
 
 ## Initialize all arrays to hold 'count' cells
@@ -62,11 +67,14 @@ func initialize(count: int) -> void:
 	cell_state.resize(count)
 	cell_danger_count.resize(count)
 	cell_neighbors.resize(count)
+	cell_positions.resize(count)
+	cell_rotations.resize(count)
 
 	# Fill with defaults
 	cell_is_mine.fill(0)
 	cell_state.fill(CellState.HIDDEN)  # All hidden
 	cell_danger_count.fill(0)
+	cell_rotations.fill(0)  # No rotation by default
 
 # ===== CELL QUERIES =====
 
