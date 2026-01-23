@@ -4,7 +4,13 @@
       "Bash(echo:*)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nInitialize Godot 4 port with Phase 1 foundation\n\nComplete rewrite from Kotlin/Android to Godot 4 for cross-platform support.\nPhase 1 establishes the core graph-based architecture for topological minesweeper.\n\nMajor Components:\n- GridData: Struct-of-Arrays data structure \\(1000x memory efficient\\)\n- GridType: Enum system for all 8 tessellation types\n- GridGenerator: Abstract base for grid generation strategies\n- SquareGridGenerator: Full implementation with torus wrapping\n- TestGrid: Comprehensive validation suite \\(7 tests, all passing\\)\n\nArchitecture Highlights:\n- Graph-based logic using adjacency lists \\(NOT 2D arrays\\)\n- Supports any tessellation including exotic grids \\(Penrose, Cairo, etc.\\)\n- Pre-calculated neighbor relationships for O\\(1\\) lookups\n- Memory efficient: 100KB for 100,000 cells vs 100MB with objects\n- Wrapping handled via graph edges \\(natural torus topology\\)\n\nDesign Documents:\n- Complete implementation plan \\(9 phases\\)\n- Technical design document with ocean/island metaphor\n- Grid mathematics reference for all tessellations\n- Architecture patterns extracted from Kotlin DCEL implementation\n- Key insights and gotchas documentation\n\nTest Results:\n✓ Grid generation with configurable wrapping\n✓ All neighbor relationships reciprocal and correct\n✓ Coordinate conversions accurate \\(cell_id ↔ pixel position\\)\n✓ Edge detection working for ghost chunk rendering\n✓ Non-wrapping boundaries validated\n\nNext Phase: MultiMesh rendering with ocean theme visualization\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(godot:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(python extract_file_history.py:*)",
+      "Bash(python deduplicate_functions.py:*)",
+      "Bash(git push:*)"
     ]
   }
 }

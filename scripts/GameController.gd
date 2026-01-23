@@ -101,8 +101,8 @@ func _generate_grid() -> void:
 				wrap_vertical,
 				use_vertex_neighbors
 			)
-		"Octasquare":
-			grid_generator = OctagonSquareGridGenerator.new(
+		"TruncatedSquare":
+			grid_generator = TruncatedSquareGridGenerator.new(
 				grid_width,
 				grid_height,
 				wrap_horizontal,
@@ -362,15 +362,6 @@ func restart_game() -> void:
 		grid_renderer.cell_multimesh.queue_free()
 	if grid_renderer.border_multimesh:
 		grid_renderer.border_multimesh.queue_free()
-	# Clean up octasquare-specific MultiMesh instances
-	if grid_renderer.octagon_multimesh:
-		grid_renderer.octagon_multimesh.queue_free()
-	if grid_renderer.square_multimesh:
-		grid_renderer.square_multimesh.queue_free()
-	if grid_renderer.octagon_border_multimesh:
-		grid_renderer.octagon_border_multimesh.queue_free()
-	if grid_renderer.square_border_multimesh:
-		grid_renderer.square_border_multimesh.queue_free()
 
 	# Clean up infinite tiles
 	for tile in grid_renderer.tile_instances:

@@ -20,7 +20,7 @@ var border_width: float = 2.0  # Width of cell borders
 
 ## Ocean theme colors
 var color_border: Color = Color(0.15, 0.2, 0.3, 1.0)       # Darker blue for borders
-var color_hidden: Color = Color(0.7, 0.75, 0.8, 0.95)      # Foggy/cloudy (can't see below)
+var color_hidden: Color = Color(0.2, 0.3, 0.4, 1.0)        # Dark ocean blue (hidden cells)
 var color_beach: Color = Color(0.95, 0.85, 0.65, 1.0)      # Sandy beach (island edge)
 var color_vegetation: Color = Color(0.3, 0.7, 0.4, 1.0)    # Green vegetation (island interior)
 var color_water: Color = Color(0.2, 0.5, 0.8, 1.0)         # Blue water (has mines nearby)
@@ -45,12 +45,6 @@ var cell_multimesh: MultiMeshInstance2D
 var cell_mesh: Mesh  # Can be QuadMesh or custom hex mesh
 var border_multimesh: MultiMeshInstance2D
 var border_mesh: Mesh  # Can be QuadMesh or custom hex mesh
-
-## For mixed-type grids (octasquare), separate MultiMesh instances
-var octagon_multimesh: MultiMeshInstance2D  # For octagons
-var square_multimesh: MultiMeshInstance2D   # For squares
-var octagon_border_multimesh: MultiMeshInstance2D  # Octagon borders
-var square_border_multimesh: MultiMeshInstance2D   # Square borders
 
 ## Number labels for danger counts
 var number_labels: Array[Label] = []
@@ -100,10 +94,9 @@ func _create_cell_mesh(with_border: bool = false) -> Mesh:
 			# Create triangle mesh using ArrayMesh
 			return _create_triangle_mesh(mesh_size)
 
-		GridType.Type.OCTASQUARE:
-			# For mixed grids, we'll handle rendering differently
-			# This creates an octagon mesh (squares will be handled separately)
-			return _create_octagon_mesh(mesh_size)
+		GridType.Type.TRUNCATED_SQUARE:
+			# STUB: Use hexagon mesh as visual test placeholder
+			return _create_hexagon_mesh(mesh_size)
 
 		_:
 			# Default to quad for unsupported types
@@ -202,98 +195,6 @@ func _create_triangle_mesh(size: float) -> ArrayMesh:
 
 	return mesh
 
-## Create an octagon mesh (regular 8-sided polygon)
-func _create_octagon_mesh(size: float) -> ArrayMesh:
-	var arrays = []
-	arrays.resize(Mesh.ARRAY_MAX)
-
-	var vertices = PackedVector2Array()
-	var uvs = PackedVector2Array()
-	var indices = PackedInt32Array()
-
-	# Center point
-	var center = Vector2.ZERO
-
-	# Generate 8 vertices around center
-	var radius = size * 0.5
-	for i in range(8):
-		var angle = deg_to_rad(45.0 * i + 22.5)  # Start at 22.5° for flat top/bottom
-		var vertex = Vector2(
-			cos(angle) * radius,
-			sin(angle) * radius
-		)
-		vertices.append(vertex)
-		# UV coordinates (0-1 range)
-		uvs.append((vertex / size) + Vector2(0.5, 0.5))
-
-	# Create triangle fan from center
-	var center_vertices = PackedVector2Array()
-	var center_uvs = PackedVector2Array()
-
-	# Add center vertex
-	center_vertices.append(center)
-	center_uvs.append(Vector2(0.5, 0.5))
-
-	# Add all edge vertices
-	for v in vertices:
-		center_vertices.append(v)
-	for uv in uvs:
-		center_uvs.append(uv)
-
-	# Create triangle fan indices
-	for i in range(8):
-		indices.append(0)  # Center
-		indices.append(i + 1)
-		indices.append((i + 1) % 8 + 1)
-
-	arrays[Mesh.ARRAY_VERTEX] = center_vertices
-	arrays[Mesh.ARRAY_TEX_UV] = center_uvs
-	arrays[Mesh.ARRAY_INDEX] = indices
-
-	var mesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-
-	return mesh
-
-## Create a square mesh (for octasquare grids)
-func _create_square_mesh(size: float) -> ArrayMesh:
-	var arrays = []
-	arrays.resize(Mesh.ARRAY_MAX)
-
-	var vertices = PackedVector2Array()
-	var uvs = PackedVector2Array()
-	var indices = PackedInt32Array()
-
-	var half_size = size * 0.5
-
-	# Four corners of the square
-	vertices.append(Vector2(-half_size, -half_size))  # Top-left
-	vertices.append(Vector2(half_size, -half_size))   # Top-right
-	vertices.append(Vector2(half_size, half_size))    # Bottom-right
-	vertices.append(Vector2(-half_size, half_size))   # Bottom-left
-
-	# UV coordinates
-	uvs.append(Vector2(0, 0))
-	uvs.append(Vector2(1, 0))
-	uvs.append(Vector2(1, 1))
-	uvs.append(Vector2(0, 1))
-
-	# Two triangles to form the square
-	indices.append(0)  # Triangle 1
-	indices.append(1)
-	indices.append(2)
-	indices.append(0)  # Triangle 2
-	indices.append(2)
-	indices.append(3)
-
-	arrays[Mesh.ARRAY_VERTEX] = vertices
-	arrays[Mesh.ARRAY_TEX_UV] = uvs
-	arrays[Mesh.ARRAY_INDEX] = indices
-
-	var mesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-
-	return mesh
 
 ## Create border mesh (wireframe outlines using lines)
 func _create_border_mesh() -> ArrayMesh:
@@ -333,11 +234,11 @@ func _create_border_mesh() -> ArrayMesh:
 			vertices.append(Vector2(1, 1) * half_size)        # Line 2: start at Bottom-right
 			vertices.append(Vector2(0, -1) * half_size)       # Line 2: end at Top
 
-		GridType.Type.OCTASQUARE:
-			# Octagon outline (8 lines forming a closed loop)
+		GridType.Type.TRUNCATED_SQUARE:
+			# STUB: Use hexagon outline as placeholder
 			var radius = cell_size / 2
-			for i in range(9):  # 9 vertices to close the loop (0-8, where 8 == 0)
-				var angle = deg_to_rad(45.0 * i + 22.5)
+			for i in range(7):  # 7 vertices to close the loop (0-6, where 6 == 0)
+				var angle = deg_to_rad(60.0 * i - 30.0)
 				vertices.append(Vector2(
 					cos(angle) * radius,
 					sin(angle) * radius
@@ -365,12 +266,8 @@ func _initialize_rendering() -> void:
 		push_error("GridRenderer: Cannot initialize without grid_data and grid_generator")
 		return
 
-	# Special handling for octasquare (mixed polygon types)
-	if grid_data.grid_type == GridType.Type.OCTASQUARE:
-		_initialize_octasquare_rendering()
-	else:
-		# Standard single-type grid rendering
-		_initialize_standard_rendering()
+	# Standard single-type grid rendering
+	_initialize_standard_rendering()
 
 	# Create labels container and number labels
 	_create_number_labels()
@@ -405,67 +302,6 @@ func _initialize_standard_rendering() -> void:
 
 	cell_multimesh.multimesh = multimesh
 
-## Initialize rendering for octasquare grids (mixed octagons and squares)
-func _initialize_octasquare_rendering() -> void:
-	# Count octagons and squares separately
-	var octagon_count = 0
-	var square_count = 0
-	for cell_id in range(grid_data.cell_count):
-		if grid_data.cell_rotations[cell_id] == 0:
-			octagon_count += 1
-		else:
-			square_count += 1
-
-	# Create octagon borders
-	border_mesh = _create_octagon_mesh(cell_size)
-	octagon_border_multimesh = MultiMeshInstance2D.new()
-	octagon_border_multimesh.z_index = 1  # In front of cells
-	add_child(octagon_border_multimesh)
-
-	var octagon_border_mm = MultiMesh.new()
-	octagon_border_mm.mesh = border_mesh
-	octagon_border_mm.transform_format = MultiMesh.TRANSFORM_2D
-	octagon_border_mm.use_colors = true
-	octagon_border_mm.instance_count = octagon_count
-	octagon_border_multimesh.multimesh = octagon_border_mm
-
-	# Create square borders
-	var square_border_mesh = _create_square_mesh(cell_size)
-	square_border_multimesh = MultiMeshInstance2D.new()
-	square_border_multimesh.z_index = 2  # Squares render on top of octagons
-	add_child(square_border_multimesh)
-
-	var square_border_mm = MultiMesh.new()
-	square_border_mm.mesh = square_border_mesh
-	square_border_mm.transform_format = MultiMesh.TRANSFORM_2D
-	square_border_mm.use_colors = true
-	square_border_mm.instance_count = square_count
-	square_border_multimesh.multimesh = square_border_mm
-
-	# Create octagon cells
-	var octagon_cell_mesh = _create_octagon_mesh(cell_size - border_width * 2)
-	octagon_multimesh = MultiMeshInstance2D.new()
-	add_child(octagon_multimesh)
-
-	var octagon_mm = MultiMesh.new()
-	octagon_mm.mesh = octagon_cell_mesh
-	octagon_mm.transform_format = MultiMesh.TRANSFORM_2D
-	octagon_mm.use_colors = true
-	octagon_mm.instance_count = octagon_count
-	octagon_multimesh.multimesh = octagon_mm
-
-	# Create square cells
-	var square_cell_mesh = _create_square_mesh(cell_size - border_width * 2)
-	square_multimesh = MultiMeshInstance2D.new()
-	square_multimesh.z_index = 1  # Squares render above octagons
-	add_child(square_multimesh)
-
-	var square_mm = MultiMesh.new()
-	square_mm.mesh = square_cell_mesh
-	square_mm.transform_format = MultiMesh.TRANSFORM_2D
-	square_mm.use_colors = true
-	square_mm.instance_count = square_count
-	square_multimesh.multimesh = square_mm
 
 ## Create number labels for all cells
 func _create_number_labels() -> void:
@@ -553,11 +389,6 @@ func _create_borders() -> void:
 
 ## Update all cell visuals (initial render)
 func _update_all_cells() -> void:
-	# Special handling for octasquare grids (mixed types)
-	if grid_data.grid_type == GridType.Type.OCTASQUARE:
-		_update_all_octasquare_cells()
-		return
-
 	# Standard single-type grid
 	if not cell_multimesh or not cell_multimesh.multimesh:
 		return
@@ -580,51 +411,6 @@ func _update_all_cells() -> void:
 		# Set color based on cell state
 		var color = _get_cell_color(cell_id)
 		multimesh.set_instance_color(cell_id, color)
-
-		# Update number label
-		if number_labels.size() > 0:
-			_update_number_label(cell_id)
-
-## Update cells for octasquare grids (separate MultiMesh instances)
-func _update_all_octasquare_cells() -> void:
-	if not octagon_multimesh or not square_multimesh:
-		return
-
-	var octagon_mm = octagon_multimesh.multimesh
-	var square_mm = square_multimesh.multimesh
-	var octagon_border_mm = octagon_border_multimesh.multimesh
-	var square_border_mm = square_border_multimesh.multimesh
-
-	var octagon_instance = 0
-	var square_instance = 0
-
-	for cell_id in range(grid_data.cell_count):
-		var is_square = (grid_data.cell_rotations[cell_id] == 1)
-		var pos = grid_data.cell_positions[cell_id]
-		var color = _get_cell_color(cell_id)
-
-		# Create transform
-		var transform = Transform2D()
-		transform.origin = pos
-
-		# Border transform (same position, no offset)
-		var border_transform = Transform2D()
-		border_transform.origin = pos
-
-		if is_square:
-			# Update square MultiMesh
-			square_mm.set_instance_transform_2d(square_instance, transform)
-			square_mm.set_instance_color(square_instance, color)
-			square_border_mm.set_instance_transform_2d(square_instance, border_transform)
-			square_border_mm.set_instance_color(square_instance, color_border)
-			square_instance += 1
-		else:
-			# Update octagon MultiMesh
-			octagon_mm.set_instance_transform_2d(octagon_instance, transform)
-			octagon_mm.set_instance_color(octagon_instance, color)
-			octagon_border_mm.set_instance_transform_2d(octagon_instance, border_transform)
-			octagon_border_mm.set_instance_color(octagon_instance, color_border)
-			octagon_instance += 1
 
 		# Update number label
 		if number_labels.size() > 0:
@@ -967,7 +753,7 @@ func _create_tile_at_grid_offset(grid_offset: Vector2i) -> void:
 
 		# Flip vertically if needed (using cached rotation flag)
 		# Apply scale BEFORE translation to avoid positioning issues
-		if grid_data.cell_rotations[cell_id] == 1 and grid_data.grid_type != GridType.Type.OCTASQUARE:
+		if grid_data.cell_rotations[cell_id] == 1:
 			transform = transform.scaled(Vector2(1, -1))  # Vertical flip (triangles only)
 
 		transform.origin = tile_pos

@@ -8,14 +8,14 @@ class_name GridType
 
 ## All supported tessellation types
 enum Type {
-	SQUARE,      ## Regular square grid (4 or 8 neighbors)
-	HEXAGON,     ## Hexagonal honeycomb (6 neighbors)
-	TRIANGLE,    ## Triangular grid (3 or 12 neighbors)
-	CAIRO,       ## Cairo pentagonal tiling (5 neighbors)
-	RHOMBILLE,   ## Rhombic tiling (4-6 neighbors)
-	SNUB_SQUARE, ## Snub square (3.3.4.3.4) tiling
-	OCTASQUARE,  ## Truncated square (4.8.8) tiling
-	PENROSE      ## Aperiodic Penrose tiling (cannot wrap)
+	SQUARE,           ## Regular square grid (4 or 8 neighbors)
+	HEXAGON,          ## Hexagonal honeycomb (6 neighbors)
+	TRIANGLE,         ## Triangular grid (3 or 12 neighbors)
+	TRUNCATED_SQUARE, ## Truncated square (4.8.8) tiling - octagons and squares
+	CAIRO,            ## Cairo pentagonal tiling (5 neighbors)
+	RHOMBILLE,        ## Rhombic tiling (4-6 neighbors)
+	SNUB_SQUARE,      ## Snub square (3.3.4.3.4) tiling
+	PENROSE           ## Aperiodic Penrose tiling (cannot wrap)
 }
 
 ## Human-readable names for UI display
@@ -24,10 +24,10 @@ static func get_type_name(type: Type) -> String:
 		Type.SQUARE: return "Square"
 		Type.HEXAGON: return "Hexagon"
 		Type.TRIANGLE: return "Triangle"
+		Type.TRUNCATED_SQUARE: return "Truncated Square"
 		Type.CAIRO: return "Cairo"
 		Type.RHOMBILLE: return "Rhombille"
 		Type.SNUB_SQUARE: return "Snub Square"
-		Type.OCTASQUARE: return "Octasquare"
 		Type.PENROSE: return "Penrose"
 		_: return "Unknown"
 
@@ -47,14 +47,14 @@ static func get_typical_neighbor_count(type: Type, use_vertex_neighbors: bool = 
 			return 6  # Hex has no vertex-only neighbors (vertices = edges)
 		Type.TRIANGLE:
 			return 12 if use_vertex_neighbors else 3
+		Type.TRUNCATED_SQUARE:
+			return -1  # Variable (4 for squares, 8 for octagons)
 		Type.CAIRO:
 			return 5
 		Type.RHOMBILLE:
 			return 6 if use_vertex_neighbors else 4
 		Type.SNUB_SQUARE:
 			return -1  # Variable (3-5 depending on cell shape)
-		Type.OCTASQUARE:
-			return -1  # Variable (3-8 depending on cell shape)
 		Type.PENROSE:
 			return -1  # Variable (typically 5-7)
 		_:
@@ -67,7 +67,7 @@ static func get_biome_name(type: Type) -> String:
 			return "Open Sea"
 		Type.TRIANGLE, Type.CAIRO, Type.RHOMBILLE:
 			return "Sunken Ruins"
-		Type.SNUB_SQUARE, Type.OCTASQUARE, Type.PENROSE:
+		Type.TRUNCATED_SQUARE, Type.SNUB_SQUARE, Type.PENROSE:
 			return "Continental Shelf"
 		_:
 			return "Unknown Waters"

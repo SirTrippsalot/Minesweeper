@@ -90,7 +90,7 @@ func _create_menu() -> void:
 	grid_type_dropdown.add_item("Square Grid", 0)
 	grid_type_dropdown.add_item("Hexagon Grid", 1)
 	grid_type_dropdown.add_item("Triangle Grid", 2)
-	grid_type_dropdown.add_item("Octagon+Square Grid", 3)
+	grid_type_dropdown.add_item("Truncated Square (STUB)", 3)
 	grid_type_dropdown.selected = 0
 	grid_type_dropdown.item_selected.connect(_on_grid_type_changed)
 	vbox.add_child(grid_type_dropdown)
@@ -310,10 +310,6 @@ func _on_grid_type_changed(index: int) -> void:
 		neighbor_mode_checkbox.disabled = true
 		neighbor_mode_checkbox.button_pressed = true
 		neighbor_mode_checkbox.text = "Include Vertex Neighbors (N/A for Hexagon)"
-	elif index == 3:  # Octasquare
-		neighbor_mode_checkbox.disabled = true
-		neighbor_mode_checkbox.button_pressed = true
-		neighbor_mode_checkbox.text = "Include Vertex Neighbors (Mixed)"
 	else:
 		neighbor_mode_checkbox.disabled = false
 		match index:
@@ -355,7 +351,7 @@ func show_menu() -> void:
 				grid_type_dropdown.selected = 1
 			"Triangle":
 				grid_type_dropdown.selected = 2
-			"Octasquare":
+			"TruncatedSquare":
 				grid_type_dropdown.selected = 3
 			_:
 				grid_type_dropdown.selected = 0
@@ -454,7 +450,7 @@ func _on_apply_pressed() -> void:
 		2:
 			new_grid_type = "Triangle"
 		3:
-			new_grid_type = "Octasquare"
+			new_grid_type = "TruncatedSquare"
 
 	# Validate mine count (can't exceed total cells - 9 for first-click safety)
 	var max_mines = (new_width * new_height) - 9
