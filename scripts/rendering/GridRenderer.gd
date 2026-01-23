@@ -53,11 +53,8 @@ var labels_container: Node2D
 ## Track which cells need visual updates
 var dirty_cells: PackedInt32Array = PackedInt32Array()
 
-## Infinite tiling for visual wrapping (camera-relative dynamic tiling)
-var tile_instances: Array[Dictionary] = []  # Array of {cells: MultiMeshInstance2D, borders: MultiMeshInstance2D, labels: Node2D, grid_offset: Vector2i}
-var grid_pixel_width: float = 0.0
-var grid_pixel_height: float = 0.0
-var camera: Camera2D = null  # Reference to camera for position tracking
+## Infinite wrapping using camera position wrapping (zero memory overhead)
+var infinite_wrapper: InfiniteGridWrapper = null
 
 ## Debug border reference
 var debug_border: Line2D = null
@@ -275,9 +272,9 @@ func _initialize_rendering() -> void:
 	# Initialize all cell visuals
 	_update_all_cells()
 
-	# Create infinite tiling for wrapping visualization
+	# Create infinite wrapping system (camera-based, zero memory)
 	if grid_data.wrap_horizontal or grid_data.wrap_vertical:
-		_create_infinite_tiles()
+		_create_infinite_wrapper()
 
 	print("GridRenderer initialized: %d cells" % grid_data.cell_count)
 
@@ -489,9 +486,6 @@ func update_dirty_cells() -> void:
 		multimesh.set_instance_color(cell_id, color)
 		_update_number_label(cell_id)
 
-	# Update infinite tiles with same cells
-	_update_tiles(cells_to_update)
-
 	dirty_cells.clear()
 
 ## Update number label for a cell
@@ -571,9 +565,6 @@ func show_flag_accuracy() -> void:
 			label.visible = true
 			updated_cells.append(cell_id)
 
-	# Update tiles to show check/X marks
-	_update_tiles(updated_cells)
-
 ## Update color theme at runtime
 func set_color_theme(
 	hidden: Color,
@@ -597,17 +588,17 @@ func get_cell_at_position(world_pos: Vector2) -> int:
 		return grid_generator.get_cell_at_position(world_pos, grid_data)
 	return -1
 
-## Create infinite tiling (viewport-based dynamic tiling)
-func _create_infinite_tiles() -> void:
+## Create infinite wrapping system using camera position wrapping
+func _create_infinite_wrapper() -> void:
 	# Get camera reference
-	camera = get_viewport().get_camera_2d()
+	var camera = get_viewport().get_camera_2d()
 	if not camera:
-		print("Warning: No camera found for infinite tiling")
+		print("Warning: No camera found for infinite wrapping")
 		return
 
 	# Calculate grid dimensions in pixels
-	grid_pixel_width = grid_data.grid_size.x * cell_size
-	grid_pixel_height = grid_data.grid_size.y * cell_size
+	var grid_pixel_width = grid_data.grid_size.x * cell_size
+	var grid_pixel_height = grid_data.grid_size.y * cell_size
 
 	# For hex grids, use actual width/height
 	if grid_data.grid_type == GridType.Type.HEXAGON:
@@ -615,213 +606,17 @@ func _create_infinite_tiles() -> void:
 		grid_pixel_width = grid_data.grid_size.x * cell_size * hex_width_ratio
 		grid_pixel_height = grid_data.grid_size.y * cell_size * 0.75
 
-	# For triangle grids, use actual spacing (half-width horizontally, full height vertically)
-	# Triangle mesh has height of 2 units (from -1 to +1), scaled by cell_size/2
-	# So actual rendered height is cell_size
-	# Horizontal spacing is reduced by half for tighter packing
+	# For triangle grids, use actual spacing
 	if grid_data.grid_type == GridType.Type.TRIANGLE:
 		grid_pixel_width = grid_data.grid_size.x * cell_size * 0.5
 		grid_pixel_height = grid_data.grid_size.y * cell_size
 
-	# Don't create tiles yet - they'll be created on-demand in _process
-	print("Infinite tiling system initialized (viewport-based)")
+	# Create wrapper instance
+	infinite_wrapper = InfiniteGridWrapper.new()
+	add_child(infinite_wrapper)
+	infinite_wrapper.setup(camera, grid_data, grid_pixel_width, grid_pixel_height)
 
-## Process function to update tile positions based on viewport
-func _process(_delta):
-	if not camera:
-		return
-
-	if not grid_data.wrap_horizontal and not grid_data.wrap_vertical:
-		return  # No wrapping, no need for infinite tiling
-
-	_update_viewport_tiles()
-
-## Update tiles based on what's visible in viewport (+ 10% buffer)
-func _update_viewport_tiles() -> void:
-	var viewport_size = get_viewport_rect().size
-	var zoom = camera.zoom.x
-
-	# Calculate visible area in world space with 10% buffer
-	var buffer_multiplier = 1.1
-	var visible_width = (viewport_size.x / zoom) * buffer_multiplier
-	var visible_height = (viewport_size.y / zoom) * buffer_multiplier
-
-	# Calculate which grid tiles are needed to cover viewport
-	var camera_pos = camera.position
-	var min_x = floor((camera_pos.x - visible_width / 2) / grid_pixel_width)
-	var max_x = ceil((camera_pos.x + visible_width / 2) / grid_pixel_width)
-	var min_y = floor((camera_pos.y - visible_height / 2) / grid_pixel_height)
-	var max_y = ceil((camera_pos.y + visible_height / 2) / grid_pixel_height)
-
-	# Build set of required grid offsets (excluding 0,0 which is the main grid)
-	var required_offsets = {}
-	for y in range(min_y, max_y + 1):
-		for x in range(min_x, max_x + 1):
-			var offset = Vector2i(x, y)
-			# Skip (0,0) since that's where the main grid is
-			if offset != Vector2i(0, 0):
-				required_offsets[offset] = true
-
-	# Remove tiles that are no longer needed
-	var tiles_to_remove = []
-	for i in range(tile_instances.size()):
-		var tile = tile_instances[i]
-		if not required_offsets.has(tile["grid_offset"]):
-			tiles_to_remove.append(i)
-
-	# Remove from back to front to preserve indices
-	tiles_to_remove.reverse()
-	for i in tiles_to_remove:
-		var tile = tile_instances[i]
-		tile["cells"].queue_free()
-		tile["borders"].queue_free()
-		tile["labels"].queue_free()
-		tile_instances.remove_at(i)
-
-	# Create tiles that are needed but don't exist
-	var existing_offsets = {}
-	for tile in tile_instances:
-		existing_offsets[tile["grid_offset"]] = true
-
-	for offset in required_offsets.keys():
-		if not existing_offsets.has(offset):
-			_create_tile_at_grid_offset(offset)
-
-## Update tile's transform to new offset
-func _update_tile_transform(tile: Dictionary, pixel_offset: Vector2) -> void:
-	var cell_mm = tile["cells"].multimesh
-	var border_mm = tile["borders"].multimesh
-	var label_container = tile["labels"]
-
-	# Update all cell positions in this tile
-	for cell_id in range(grid_data.cell_count):
-		var base_pos = grid_data.cell_positions[cell_id]  # Use cached position
-		var tile_pos = base_pos + pixel_offset
-
-		var transform = Transform2D()
-		transform.origin = tile_pos
-		cell_mm.set_instance_transform_2d(cell_id, transform)
-		border_mm.set_instance_transform_2d(cell_id, transform)
-
-	# Update label container position
-	label_container.position = pixel_offset
-
-## Create a single tile instance at the given grid offset
-func _create_tile_at_grid_offset(grid_offset: Vector2i) -> void:
-	var pixel_offset = Vector2(
-		grid_offset.x * grid_pixel_width,
-		grid_offset.y * grid_pixel_height
-	)
-
-	# Create cell MultiMesh
-	var tile_cell_mm = MultiMeshInstance2D.new()
-	tile_cell_mm.z_index = 0
-	add_child(tile_cell_mm)
-
-	var cell_multimesh_instance = MultiMesh.new()
-	cell_multimesh_instance.mesh = cell_mesh
-	cell_multimesh_instance.transform_format = MultiMesh.TRANSFORM_2D
-	cell_multimesh_instance.use_colors = true
-	cell_multimesh_instance.instance_count = grid_data.cell_count
-	tile_cell_mm.multimesh = cell_multimesh_instance
-
-	# Create border MultiMesh
-	var tile_border_mm = MultiMeshInstance2D.new()
-	tile_border_mm.z_index = 1  # In front of cells to show wireframe outlines
-	add_child(tile_border_mm)
-
-	var border_multimesh_instance = MultiMesh.new()
-	border_multimesh_instance.mesh = border_mesh
-	border_multimesh_instance.transform_format = MultiMesh.TRANSFORM_2D
-	border_multimesh_instance.use_colors = true
-	border_multimesh_instance.instance_count = grid_data.cell_count
-	tile_border_mm.multimesh = border_multimesh_instance
-
-	# Create labels container
-	var tile_labels = Node2D.new()
-	tile_labels.z_index = 1
-	tile_labels.position = pixel_offset
-	add_child(tile_labels)
-
-	# Populate all cells in this tile
-	for cell_id in range(grid_data.cell_count):
-		var pixel_pos = grid_data.cell_positions[cell_id]  # Use cached position
-		var tile_pos = pixel_pos + pixel_offset
-
-		# Set cell transform and color using cached rotation
-		var transform = Transform2D()
-
-		# Flip vertically if needed (using cached rotation flag)
-		# Apply scale BEFORE translation to avoid positioning issues
-		if grid_data.cell_rotations[cell_id] == 1:
-			transform = transform.scaled(Vector2(1, -1))  # Vertical flip (triangles only)
-
-		transform.origin = tile_pos
-
-		cell_multimesh_instance.set_instance_transform_2d(cell_id, transform)
-		cell_multimesh_instance.set_instance_color(cell_id, _get_cell_color(cell_id))
-
-		# Set border transform and color
-		border_multimesh_instance.set_instance_transform_2d(cell_id, transform)
-		border_multimesh_instance.set_instance_color(cell_id, color_border)
-
-		# Create tile label (mirroring main label)
-		var main_label = number_labels[cell_id]
-		var tile_label = Label.new()
-
-		# Calculate label position
-		var label_pos = pixel_pos - Vector2(cell_size / 2, cell_size / 2)
-
-		# Apply centroid adjustment for triangles
-		if grid_data.grid_type == GridType.Type.TRIANGLE:
-			var y_offset = cell_size * 0.17  # Visual adjustment for triangle centroid
-			if grid_data.cell_rotations[cell_id] == 0:
-				# Up-pointing: shift label DOWN (centroid is too high visually)
-				label_pos.y += y_offset
-			else:
-				# Down-pointing: shift label UP (centroid is too low visually)
-				label_pos.y -= y_offset
-
-		tile_label.position = label_pos
-		tile_label.size = Vector2(cell_size, cell_size)
-		tile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tile_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		tile_label.add_theme_font_size_override("font_size", int(cell_size * 0.6))
-		tile_label.text = main_label.text
-		tile_label.visible = main_label.visible
-		if main_label.has_theme_color_override("font_color"):
-			tile_label.add_theme_color_override("font_color", main_label.get_theme_color("font_color"))
-		tile_labels.add_child(tile_label)
-
-	# Store tile reference
-	tile_instances.append({
-		"cells": tile_cell_mm,
-		"borders": tile_border_mm,
-		"labels": tile_labels,
-		"grid_offset": grid_offset
-	})
-
-## Update all tiles when cells change
-func _update_tiles(cell_ids: PackedInt32Array) -> void:
-	if tile_instances.size() == 0:
-		return
-
-	# Update each tile
-	for tile in tile_instances:
-		var cell_mm = tile["cells"].multimesh
-		var label_container = tile["labels"]
-
-		for cell_id in cell_ids:
-			# Update color
-			cell_mm.set_instance_color(cell_id, _get_cell_color(cell_id))
-
-			# Update label
-			var main_label = number_labels[cell_id]
-			var tile_label = label_container.get_child(cell_id)
-			tile_label.text = main_label.text
-			tile_label.visible = main_label.visible
-			if main_label.has_theme_color_override("font_color"):
-				tile_label.add_theme_color_override("font_color", main_label.get_theme_color("font_color"))
+	print("Infinite wrapping initialized (camera-based, zero memory overhead)")
 
 ## Create a purple debug border around the primary grid
 func _create_debug_grid_border() -> void:

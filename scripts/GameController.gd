@@ -363,15 +363,10 @@ func restart_game() -> void:
 	if grid_renderer.border_multimesh:
 		grid_renderer.border_multimesh.queue_free()
 
-	# Clean up infinite tiles
-	for tile in grid_renderer.tile_instances:
-		if tile.has("cells") and tile["cells"]:
-			tile["cells"].queue_free()
-		if tile.has("borders") and tile["borders"]:
-			tile["borders"].queue_free()
-		if tile.has("labels") and tile["labels"]:
-			tile["labels"].queue_free()
-	grid_renderer.tile_instances.clear()
+	# Clean up infinite wrapper
+	if grid_renderer.infinite_wrapper:
+		grid_renderer.infinite_wrapper.queue_free()
+		grid_renderer.infinite_wrapper = null
 
 	# Update renderer with new grid data and generator
 	grid_renderer.grid_data = grid_data

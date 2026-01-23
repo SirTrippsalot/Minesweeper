@@ -60,25 +60,23 @@ func _update_camera_wrapping() -> void:
 	var cam_pos = camera.position
 	var wrapped = false
 
-	# Wrap horizontal
+	# Wrap horizontal (modulo to keep within 0 to grid_pixel_width)
 	if wrap_horizontal:
-		# If camera goes past right edge, wrap to left
-		if cam_pos.x > grid_pixel_width / 2 + wrap_margin:
+		# Use modulo to wrap seamlessly
+		while cam_pos.x > grid_pixel_width:
 			cam_pos.x -= grid_pixel_width
 			wrapped = true
-		# If camera goes past left edge, wrap to right
-		elif cam_pos.x < -grid_pixel_width / 2 - wrap_margin:
+		while cam_pos.x < 0:
 			cam_pos.x += grid_pixel_width
 			wrapped = true
 
-	# Wrap vertical
+	# Wrap vertical (modulo to keep within 0 to grid_pixel_height)
 	if wrap_vertical:
-		# If camera goes past bottom edge, wrap to top
-		if cam_pos.y > grid_pixel_height / 2 + wrap_margin:
+		# Use modulo to wrap seamlessly
+		while cam_pos.y > grid_pixel_height:
 			cam_pos.y -= grid_pixel_height
 			wrapped = true
-		# If camera goes past top edge, wrap to bottom
-		elif cam_pos.y < -grid_pixel_height / 2 - wrap_margin:
+		while cam_pos.y < 0:
 			cam_pos.y += grid_pixel_height
 			wrapped = true
 
